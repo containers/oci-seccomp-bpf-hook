@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/containers/oci-seccomp-bpf-hook.svg?branch=master)](https://travis-ci.org/containers/oci-seccomp-bpf-hook)
+
 # oci-seccomp-bpf-hook
 
 OCI hooks to generate seccomp profiles by tracing the syscalls made by the container. The generated profile would whitelist all the syscalls made and blacklist every other syscall.
