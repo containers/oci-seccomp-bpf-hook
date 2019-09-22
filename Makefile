@@ -14,6 +14,24 @@ HOOK_BIN_DIR ?= ${PREFIX}/libexec/oci/hooks.d
 ETCDIR ?= /etc
 HOOK_DIR ?= ${PREFIX}/share/containers/oci/hooks.d/
 
+# Can be used for local testing (e.g., to set filters)
+BATS_OPTS ?=
+
+# If GOPATH not specified, use one in the local directory
+ifeq ($(GOPATH),)
+export GOPATH := $(CURDIR)/_output
+unexport GOBIN
+endif
+FIRST_GOPATH := $(firstword $(subst :, ,$(GOPATH)))
+GOPKGDIR := $(FIRST_GOPATH)/src/$(PROJECT)
+GOPKGBASEDIR ?= $(shell dirname "$(GOPKGDIR)")
+
+GOBIN := $(shell $(GO) env GOBIN)
+ifeq ($(GOBIN),)
+GOBIN := $(FIRST_GOPATH)/bin
+endif
+
+
 .PHONY: all
 all: docs binary
 
@@ -21,10 +39,18 @@ all: docs binary
 docs:
 	$(MAKE) -C docs
 
-
 .PHONY: all
 binary:
 	$(GO_BUILD) -o bin/oci-seccomp-bpf-hook $(PROJECT)
+
+.PHONY: validate
+validate: .install.golangci-lint
+	golangci-lint run
+
+.install.golangci-lint:
+	if [ ! -x "$(GOBIN)/golangci-lint" ]; then \
+		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOBIN)/ v1.18.0; \
+	fi
 
 .PHONY: vendor
 vendor:
@@ -32,6 +58,12 @@ vendor:
 		$(GO) mod tidy && \
 		$(GO) mod vendor && \
 		$(GO) mod verify
+
+.PHONY: test-integration
+test-integration:
+	@echo
+	@echo "==> Running integration tests (must be run as root)"
+	bats $(BATS_OPTS) test/
 
 install: all
 	install ${SELINUXOPT} -d -m 755 ${DESTDIR}$(HOOK_BIN_DIR)
