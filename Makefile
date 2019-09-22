@@ -14,16 +14,26 @@ HOOK_BIN_DIR ?= ${PREFIX}/libexec/oci/hooks.d
 ETCDIR ?= /etc
 HOOK_DIR ?= ${PREFIX}/share/containers/oci/hooks.d/
 
-all:
+.PHONY: all
+all: docs binary
+
+.PHONY: docs
+docs:
+	$(MAKE) -C docs
+
+
+.PHONY: all
+binary:
 	$(GO_BUILD) -o bin/oci-seccomp-bpf-hook $(PROJECT)
 
+.PHONY: vendor
 vendor:
 	export GO111MODULE=on \
 		$(GO) mod tidy && \
 		$(GO) mod vendor && \
 		$(GO) mod verify
 
-install:
+install: all
 	install ${SELINUXOPT} -d -m 755 ${DESTDIR}$(HOOK_BIN_DIR)
 	install ${SELINUXOPT} -d -m 755 ${DESTDIR}$(HOOK_DIR)
 	install ${SELINUXOPT} -m 755 bin/oci-seccomp-bpf-hook ${DESTDIR}$(HOOK_BIN_DIR)
@@ -31,4 +41,11 @@ install:
 	sed -i 's|HOOK_BIN_DIR|$(HOOK_BIN_DIR)|g' ${DESTDIR}$(HOOK_DIR)/oci-seccomp-bpf-hook-run.json
 	install ${SELINUXOPT} -m 644 oci-seccomp-bpf-hook-stop.json ${DESTDIR}$(HOOK_DIR)
 	sed -i 's|HOOK_BIN_DIR|$(HOOK_BIN_DIR)|g' ${DESTDIR}$(HOOK_DIR)/oci-seccomp-bpf-hook-stop.json
+	$(MAKE) -C docs install
 
+clean: ## Clean artifacts
+	$(MAKE) -C docs clean
+	rm -rf \
+		bin
+	find . -name \*~ -delete
+	find . -name \#\* -delete
