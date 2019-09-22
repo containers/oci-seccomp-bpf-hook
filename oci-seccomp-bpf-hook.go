@@ -1,5 +1,3 @@
-// +build oci_seccomp_bpf_hook
-
 package main
 
 import (
