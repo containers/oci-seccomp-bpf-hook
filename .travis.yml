@@ -1,15 +1,6 @@
 language: go
-
-# Use Ubuntu 18.04
 dist: bionic
-
 sudo: required
-
-services:
-        - docker
-
-env:
-        - CTR_ENGINE=docker
 
 before_install:
         - sudo add-apt-repository ppa:duggan/bats --yes
