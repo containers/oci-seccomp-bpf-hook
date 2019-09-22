@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log/syslog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -21,6 +22,7 @@ import (
 	spec "github.com/opencontainers/runtime-spec/specs-go"
 	seccomp "github.com/seccomp/libseccomp-golang"
 	"github.com/sirupsen/logrus"
+	lsyslog "github.com/sirupsen/logrus/hooks/syslog"
 )
 
 // event struct used to read data from the perf ring buffer
@@ -107,6 +109,11 @@ var version string
 
 func main() {
 
+	log := logrus.New()
+	hook, err := lsyslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
+	if err == nil {
+		log.Hooks.Add(hook)
+	}
 	terminate := flag.Bool("t", false, "send SIGINT to floating process")
 	runBPF := flag.Int("r", 0, "-r [PID] run the BPF function and attach to the pid")
 	fileName := flag.String("f", "", "path of the file to save the seccomp profile")
@@ -121,35 +128,35 @@ func main() {
 
 	profilePath, err := filepath.Abs(*fileName)
 	if err != nil {
-		logrus.Error(err)
+		log.Error(err)
 	}
 
 	logfilePath, err := filepath.Abs("trace-log")
 	if err != nil {
-		logrus.Error(err)
+		log.Error(err)
 	}
 	logfile, err := os.OpenFile(logfilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		logrus.Errorf("error opening file: %v", err)
+		log.Errorf("error opening file: %v", err)
 	}
 
 	defer logfile.Close()
 	formatter := new(logrus.TextFormatter)
 	formatter.FullTimestamp = true
-	logrus.SetFormatter(formatter)
-	logrus.SetOutput(logfile)
+	log.SetFormatter(formatter)
+	log.SetOutput(logfile)
 	if *runBPF > 0 {
-		logrus.Println("Filepath : ", profilePath)
-		if err := runBPFSource(*runBPF, profilePath); err != nil {
-			logrus.Error(err)
+		log.Println("Filepath : ", profilePath)
+		if err := runBPFSource(*runBPF, profilePath, log); err != nil {
+			log.Error(err)
 		}
 	} else if *terminate {
 		if err := sendSIGINT(); err != nil {
-			logrus.Error(err)
+			log.Error(err)
 		}
 	} else if *start {
 		if err := startFloatingProcess(); err != nil {
-			logrus.Error(err)
+			log.Error(err)
 		}
 	}
 }
@@ -212,7 +219,7 @@ func startFloatingProcess() error {
 }
 
 // run the BPF source and attach it to raw_syscalls:sys_enter tracepoint
-func runBPFSource(pid int, profilePath string) error {
+func runBPFSource(pid int, profilePath string, log *logrus.Logger) error {
 
 	ppid := os.Getppid()
 	parentProcess, err := os.FindProcess(ppid)
@@ -221,7 +228,7 @@ func runBPFSource(pid int, profilePath string) error {
 		return fmt.Errorf("cannot find the parent process pid %d : %q", ppid, err)
 	}
 
-	logrus.Println("Running floating process PID to attach:", pid)
+	log.Println("Running floating process PID to attach:", pid)
 	syscalls := make(map[string]int, 303)
 	src := strings.Replace(source, "$PARENT_PID", strconv.Itoa(pid), -1)
 	m := bcc.NewModule(src, []string{})
@@ -232,7 +239,7 @@ func runBPFSource(pid int, profilePath string) error {
 		return err
 	}
 
-	logrus.Println("Loaded tracepoint")
+	log.Println("Loaded tracepoint")
 
 	if err := m.AttachTracepoint("raw_syscalls:sys_enter", tracepoint); err != nil {
 		return fmt.Errorf("unable to load tracepoint err:%q", err.Error())
@@ -260,12 +267,12 @@ func runBPFSource(pid int, profilePath string) error {
 			data := <-channel
 			err := binary.Read(bytes.NewBuffer(data), binary.LittleEndian, &e)
 			if err != nil {
-				logrus.Errorf("failed to decode received data '%s': %s\n", data, err)
+				log.Errorf("failed to decode received data '%s': %s\n", data, err)
 				continue
 			}
 			name, err := getName(e.ID)
 			if err != nil {
-				logrus.Errorf("failed to get name of syscall from id : %d received : %q", e.ID, name)
+				log.Errorf("failed to get name of syscall from id : %d received : %q", e.ID, name)
 			}
 			// syscalls are not recorded until prctl() is called
 			if name == "prctl" {
@@ -276,10 +283,10 @@ func runBPFSource(pid int, profilePath string) error {
 			}
 		}
 	}()
-	logrus.Println("PerfMap Start")
+	log.Println("PerfMap Start")
 	perfMap.Start()
 	<-sig
-	logrus.Println("PerfMap Stop")
+	log.Println("PerfMap Stop")
 	perfMap.Stop()
 	if err := generateProfile(syscalls, profilePath); err != nil {
 		return err
