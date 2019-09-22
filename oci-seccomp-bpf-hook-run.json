@@ -1,0 +1,18 @@
+{
+    "version": "1.0.0",
+    "hook": {
+        "path": "/usr/local/libexec/oci/hooks.d/oci-seccomp-bpf-hook",
+        "args": [
+            "oci-seccomp-bpf-hook",
+            "-s"
+        ]
+    },
+    "when": {
+        "annotations": {
+            "io.containers.trace-syscall": ".*"
+        }
+    },
+    "stages": [
+        "prestart"
+    ]
+}
