@@ -16,8 +16,8 @@ To build it, we need extra dependencies namely bcc-devel and kernel-headers for 
 
 Interface:
 
-```
-sudo podman run --annotation io.containers.trace-syscall=[absolute path to the json file] IMAGE COMMAND
+```bash
+sudo podman run --annotation io.containers.trace-syscall="if:[absolute path to the input file];of:[absolute path to the output file]" IMAGE COMMAND
 ```
 
-The profile will be created at the path provided to the annotation.
+The profile will be created at the output path provided to the annotation. Providing `of:` is mandatory, while `if:` is optional. An input file can be used to create a baseline and newly recorded syscalls will be added to the set and written to the output. If a syscall is blocked in the base profile, then it will remain blocked in the output file even if it is recorded while tracing.

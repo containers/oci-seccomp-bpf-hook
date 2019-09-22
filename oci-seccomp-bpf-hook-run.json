@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
     "hook": {
-	"path": "HOOK_BIN_DIR/oci-seccomp-bpf-hook",
+        "path": "HOOK_BIN_DIR/oci-seccomp-bpf-hook",
         "args": [
             "oci-seccomp-bpf-hook",
             "-s"
@@ -16,3 +16,4 @@
         "prestart"
     ]
 }
+
