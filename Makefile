@@ -7,9 +7,9 @@ ifeq ($(shell go help mod >/dev/null 2>&1 && echo true), true)
 	GO_BUILD=GO111MODULE=on $(GO) build -mod=vendor
 endif
 DESTDIR ?=
+PREFIX ?= /usr
 SELINUXOPT ?= $(shell test -x /usr/sbin/selinuxenabled && selinuxenabled && echo -Z)
 PROJECT := github.com/containers/oci-seccomp-bpf-hook
-
 HOOK_BIN_DIR ?= ${PREFIX}/libexec/oci/hooks.d
 ETCDIR ?= /etc
 HOOK_DIR ?= ${PREFIX}/share/containers/oci/hooks.d/
