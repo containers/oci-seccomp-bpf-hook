@@ -47,6 +47,6 @@ OCI hook configuration file for poststop
 podman(1), seccomp(2), oci-hooks(5)
 
 ## AUTHORS
-Divyansh Kamboj <agilephoenix815.dk@gmail.com>
+Divyansh Kamboj <kambojdivyansh2000@gmail.com>
 Valentin Rothberg <vrothberg@redhat.com>
 Dan Walsh <dwalsh@redhat.com>
