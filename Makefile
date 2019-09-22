@@ -10,9 +10,9 @@ DESTDIR ?=
 SELINUXOPT ?= $(shell test -x /usr/sbin/selinuxenabled && selinuxenabled && echo -Z)
 PROJECT := github.com/containers/oci-seccomp-bpf-hook
 
-HOOK_BIN_DIR ?= ${PREFIX}/libexec/oci/hooks.d/
+HOOK_BIN_DIR ?= ${PREFIX}/libexec/oci/hooks.d
 ETCDIR ?= /etc
-HOOK_DIR ?= ${ETCDIR}/containers/oci/hooks.d/
+HOOK_DIR ?= ${PREFIX}/share/containers/oci/hooks.d/
 
 BUILDTAG_TRACE_HOOK ?= $(shell ./check_libbcc.sh)
 
@@ -39,6 +39,8 @@ install:
 		install ${SELINUXOPT} -d -m 755 ${DESTDIR}$(HOOK_DIR) ; \
 		install ${SELINUXOPT} -m 755 bin/oci-seccomp-bpf-hook ${DESTDIR}$(HOOK_BIN_DIR) ; \
 		install ${SELINUXOPT} -m 644 oci-seccomp-bpf-hook-run.json ${DESTDIR}$(HOOK_DIR) ; \
+		sed -i 's|HOOK_BIN_DIR|$(HOOK_BIN_DIR)|g' ${DESTDIR}$(HOOK_DIR)/oci-seccomp-bpf-hook-run.json; \
 		install ${SELINUXOPT} -m 644 oci-seccomp-bpf-hook-stop.json ${DESTDIR}$(HOOK_DIR) ; \
+		sed -i 's|HOOK_BIN_DIR|$(HOOK_BIN_DIR)|g' ${DESTDIR}$(HOOK_DIR)/oci-seccomp-bpf-hook-stop.json; \
 	fi
 

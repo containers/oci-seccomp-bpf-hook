@@ -172,7 +172,12 @@ func startFloatingProcess() error {
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, syscall.SIGUSR1)
 
-		process, err := os.StartProcess("/usr/local/libexec/oci/hooks.d/oci-seccomp-bpf-hook", []string{"oci-seccomp-bpf-hook", "-r", strconv.Itoa(pid), "-f", fileName}, attr)
+		executable, err := os.Executable()
+		if err != nil {
+			return fmt.Errorf("cannot determine executable path:%q", err.Error())
+		}
+
+		process, err := os.StartProcess(executable, []string{"oci-seccomp-bpf-hook", "-r", strconv.Itoa(pid), "-f", fileName}, attr)
 		if err != nil {
 			return fmt.Errorf("cannot launch process err: %q", err.Error())
 		}
