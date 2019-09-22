@@ -1,0 +1,24 @@
+language: go
+
+# Use Ubuntu 18.04
+dist: bionic
+
+sudo: required
+
+services:
+        - docker
+
+env:
+        - CTR_ENGINE=docker
+
+before_install:
+        - sudo add-apt-repository ppa:duggan/bats --yes
+        - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
+        - echo "deb https://repo.iovisor.org/apt/$(lsb_release -cs) $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/iovisor.list
+        - sudo apt-get update -qq
+        - sudo apt-get install -qq bats bcc-tools libseccomp-dev linux-headers-$(uname -r)
+
+script:
+        - make validate
+        - make vendor
+        - ./hack/tree_status.sh
