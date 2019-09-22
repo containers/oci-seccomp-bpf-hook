@@ -14,6 +14,9 @@ HOOK_BIN_DIR ?= ${PREFIX}/libexec/oci/hooks.d
 ETCDIR ?= /etc
 HOOK_DIR ?= ${PREFIX}/share/containers/oci/hooks.d/
 
+# Can be used for local testing (e.g., to set filters)
+BATS_OPTS ?=
+
 # If GOPATH not specified, use one in the local directory
 ifeq ($(GOPATH),)
 export GOPATH := $(CURDIR)/_output
@@ -40,7 +43,7 @@ docs:
 binary:
 	$(GO_BUILD) -o bin/oci-seccomp-bpf-hook $(PROJECT)
 
-.PHONY: vendor
+.PHONY: validate
 validate: .install.golangci-lint
 	golangci-lint run
 
@@ -49,11 +52,18 @@ validate: .install.golangci-lint
 		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOBIN)/ v1.18.0; \
 	fi
 
+.PHONY: vendor
 vendor:
 	export GO111MODULE=on \
 		$(GO) mod tidy && \
 		$(GO) mod vendor && \
 		$(GO) mod verify
+
+.PHONY: test-integration
+test-integration:
+	@echo
+	@echo "==> Running integration tests (must be run as root)"
+	bats $(BATS_OPTS) test/
 
 install: all
 	install ${SELINUXOPT} -d -m 755 ${DESTDIR}$(HOOK_BIN_DIR)
