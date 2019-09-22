@@ -13,6 +13,7 @@ PROJECT := github.com/containers/oci-seccomp-bpf-hook
 HOOK_BIN_DIR ?= ${PREFIX}/libexec/oci/hooks.d
 ETCDIR ?= /etc
 HOOK_DIR ?= ${PREFIX}/share/containers/oci/hooks.d/
+VERSION ?= $(shell cat ./VERSION)
 
 # Can be used for local testing (e.g., to set filters)
 BATS_OPTS ?=
@@ -41,7 +42,7 @@ docs:
 
 .PHONY: all
 binary:
-	$(GO_BUILD) -o bin/oci-seccomp-bpf-hook $(PROJECT)
+	$(GO_BUILD) -o bin/oci-seccomp-bpf-hook -ldflags "-X main.version=${VERSION}" $(PROJECT)
 
 .PHONY: validate
 validate: .install.golangci-lint

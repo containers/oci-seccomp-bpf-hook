@@ -102,14 +102,22 @@ int enter_trace(struct tracepoint__raw_syscalls__sys_enter *args)
 }
 `
 
+// version is the version string of the hook. Set at build time.
+var version string
+
 func main() {
 
 	terminate := flag.Bool("t", false, "send SIGINT to floating process")
 	runBPF := flag.Int("r", 0, "-r [PID] run the BPF function and attach to the pid")
 	fileName := flag.String("f", "", "path of the file to save the seccomp profile")
-
 	start := flag.Bool("s", false, "Start the hook which would execute a process to trace syscalls made by the container")
+	printVersion := flag.Bool("version", false, "Print the hook's version")
 	flag.Parse()
+
+	if *printVersion {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	profilePath, err := filepath.Abs(*fileName)
 	if err != nil {
