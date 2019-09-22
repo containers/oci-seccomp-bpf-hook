@@ -14,7 +14,7 @@ HOOK_BIN_DIR ?= ${PREFIX}/libexec/oci/hooks.d
 ETCDIR ?= /etc
 HOOK_DIR ?= ${PREFIX}/share/containers/oci/hooks.d/
 
-BUILDTAG_TRACE_HOOK ?= $(shell ./check_libbcc.sh)
+BUILDTAG_TRACE_HOOK ?= $(shell ./hack/check_libbcc.sh)
 
 ifeq (,$(BUILDTAG_TRACE_HOOK))
 $(warning \
@@ -24,7 +24,7 @@ endif
 
 all:
 	if [ ! -z "$(BUILDTAG_TRACE_HOOK)" ] ; then \
-		$(GO_BUILD) -tags $(BUILDTAG_TRACE_HOOK) -o bin/oci-seccomp-bpf-hook $(PROJECT)/src; \
+		$(GO_BUILD) -tags $(BUILDTAG_TRACE_HOOK) -o bin/oci-seccomp-bpf-hook $(PROJECT); \
 	fi
 
 vendor:
