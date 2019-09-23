@@ -2,6 +2,14 @@
 
 load helpers
 
+@test "Version check" {
+	local version
+	version=$(cat ./VERSION)
+	run ./bin/oci-seccomp-bpf-hook --version
+	[ "$status" -eq 0 ]
+	[[ ${lines[0]} =~ "${version}" ]]
+}
+
 @test "Trace and check size of generated profile" {
 	local tmpFile
 	local size
