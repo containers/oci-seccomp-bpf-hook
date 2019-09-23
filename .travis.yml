@@ -2,6 +2,9 @@ language: go
 dist: bionic
 sudo: required
 
+env:
+        - HOOK_BIN_DIR=/usr/lib/oci/hooks.d
+
 before_install:
         - sudo add-apt-repository ppa:duggan/bats --yes
         - sudo add-apt-repository -y ppa:projectatomic/ppa
@@ -12,6 +15,11 @@ before_install:
         - sudo apt-get install -qq podman software-properties-common uidmap
 
 script:
+        - make install.tools
         - make validate
+        - make binary
         - make vendor
         - ./hack/tree_status.sh
+        - make docs
+        - sudo make install
+        - sudo make test-integration

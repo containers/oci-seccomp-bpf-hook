@@ -32,6 +32,10 @@ ifeq ($(GOBIN),)
 GOBIN := $(FIRST_GOPATH)/bin
 endif
 
+define go-get
+	env GO111MODULE=off \
+		$(GO) get -u ${1}
+endef
 
 .PHONY: all
 all: docs binary
@@ -45,13 +49,8 @@ binary:
 	$(GO_BUILD) -o bin/oci-seccomp-bpf-hook -ldflags "-X main.version=${VERSION}" $(PROJECT)
 
 .PHONY: validate
-validate: .install.golangci-lint
+validate:
 	golangci-lint run
-
-.install.golangci-lint:
-	if [ ! -x "$(GOBIN)/golangci-lint" ]; then \
-		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOBIN)/ v1.18.0; \
-	fi
 
 .PHONY: vendor
 vendor:
@@ -66,7 +65,23 @@ test-integration:
 	@echo "==> Running integration tests (must be run as root)"
 	bats $(BATS_OPTS) test/
 
-install: all
+
+.PHONY: install.tools
+install.tools: .install.golangci-lint .install.md2man
+
+.install.golangci-lint:
+	if [ ! -x "$(GOBIN)/golangci-lint" ]; then \
+		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOBIN)/ v1.18.0; \
+	fi
+
+
+.install.md2man:
+	if [ ! -x "$(GOBIN)/go-md2man" ]; then \
+		   $(call go-get,github.com/cpuguy83/go-md2man); \
+	fi
+
+.PHONY: install
+install:
 	install ${SELINUXOPT} -d -m 755 ${DESTDIR}$(HOOK_BIN_DIR)
 	install ${SELINUXOPT} -d -m 755 ${DESTDIR}$(HOOK_DIR)
 	install ${SELINUXOPT} -m 755 bin/oci-seccomp-bpf-hook ${DESTDIR}$(HOOK_BIN_DIR)
