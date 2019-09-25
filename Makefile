@@ -44,7 +44,7 @@ all: docs binary
 docs:
 	$(MAKE) -C docs
 
-.PHONY: all
+.PHONY: binary
 binary:
 	$(GO_BUILD) -o bin/oci-seccomp-bpf-hook -ldflags "-X main.version=${VERSION}" $(PROJECT)
 
