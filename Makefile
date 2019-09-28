@@ -87,8 +87,6 @@ install:
 	install ${SELINUXOPT} -m 755 bin/oci-seccomp-bpf-hook ${DESTDIR}$(HOOK_BIN_DIR)
 	install ${SELINUXOPT} -m 644 oci-seccomp-bpf-hook-run.json ${DESTDIR}$(HOOK_DIR)
 	sed -i 's|HOOK_BIN_DIR|$(HOOK_BIN_DIR)|g' ${DESTDIR}$(HOOK_DIR)/oci-seccomp-bpf-hook-run.json
-	install ${SELINUXOPT} -m 644 oci-seccomp-bpf-hook-stop.json ${DESTDIR}$(HOOK_DIR)
-	sed -i 's|HOOK_BIN_DIR|$(HOOK_BIN_DIR)|g' ${DESTDIR}$(HOOK_DIR)/oci-seccomp-bpf-hook-stop.json
 	$(MAKE) -C docs install
 
 clean: ## Clean artifacts
@@ -97,3 +95,4 @@ clean: ## Clean artifacts
 		bin
 	find . -name \*~ -delete
 	find . -name \#\* -delete
+	

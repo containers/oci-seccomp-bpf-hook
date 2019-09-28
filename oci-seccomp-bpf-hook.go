@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/docker/docker/api/types"
@@ -33,6 +34,8 @@ type event struct {
 	ID uint32
 	// Command which makes the syscall
 	Command [16]byte
+	// Stops tracing syscalls if true
+	StopTracing bool
 }
 
 // the source is a bpf program compiled at runtime. Some macro's like
@@ -56,14 +59,15 @@ BPF_HASH(parent_namespace, u64, unsigned int);
 BPF_PERF_OUTPUT(events);
 
 // data_t used to store the data received from the event
-struct syscall_data
-{
-	// PID of the process
-	u32 pid;
-	// the syscall number
-	u32 id;
-	// command which is making the syscall
+struct syscall_data {
+    // PID of the process
+    u32 pid;
+    // the syscall number
+    u32 id;
+    // command which is making the syscall
     char comm[16];
+    // Stops tracing syscalls if true
+    bool stopTracing;
 };
 
 // enter_trace : function is attached to the kernel tracepoint raw_syscalls:sys_enter it is
@@ -73,33 +77,45 @@ struct syscall_data
 // userspace using perf ring buffer
 
 // specification of args from sys/kernel/debug/tracing/events/raw_syscalls/sys_enter/format
-int enter_trace(struct tracepoint__raw_syscalls__sys_enter *args)
+int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
 {
     struct syscall_data data = {};
     u64 key = 0;
     unsigned int zero = 0;
-    struct task_struct *task;
+    struct task_struct* task;
 
     data.pid = bpf_get_current_pid_tgid();
     data.id = (int)args->id;
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
 
-    task = (struct task_struct *)bpf_get_current_task();
-    struct nsproxy *ns = task->nsproxy;
+    task = (struct task_struct*)bpf_get_current_task();
+    struct nsproxy* ns = task->nsproxy;
     unsigned int inum = ns->pid_ns_for_children->ns.inum;
 
-    if (data.pid == $PARENT_PID)
-    {
+    if (data.pid == $PARENT_PID) {
         parent_namespace.update(&key, &inum);
     }
-    unsigned int *parent_inum = parent_namespace.lookup_or_init(&key, &zero);
+    unsigned int* parent_inum = parent_namespace.lookup_or_init(&key, &zero);
 
-    if (*parent_inum != inum)
-    {
+    if (*parent_inum != inum) {
         return 0;
     }
 
+    data.stopTracing = false;
     events.perf_submit(args, &data, sizeof(data));
+    return 0;
+}
+
+// Checks if the container has exited
+int check_exit(struct tracepoint__sched__sched_process_exit* args)
+{
+    if (args->pid == $PARENT_PID) {
+        struct syscall_data data = {};
+        data.pid = args->pid;
+        data.id = 0;
+        data.stopTracing = true;
+        events.perf_submit(args, &data, sizeof(data));
+    }
     return 0;
 }
 `
@@ -114,7 +130,7 @@ func main() {
 	if err == nil {
 		log.Hooks.Add(hook)
 	}
-	terminate := flag.Bool("t", false, "send SIGINT to floating process")
+
 	runBPF := flag.Int("r", 0, "-r [PID] run the BPF function and attach to the pid")
 	fileName := flag.String("f", "", "path of the file to save the seccomp profile")
 	start := flag.Bool("s", false, "Start the hook which would execute a process to trace syscalls made by the container")
@@ -148,10 +164,6 @@ func main() {
 	if *runBPF > 0 {
 		log.Println("Filepath : ", profilePath)
 		if err := runBPFSource(*runBPF, profilePath, log); err != nil {
-			log.Error(err)
-		}
-	} else if *terminate {
-		if err := sendSIGINT(); err != nil {
 			log.Error(err)
 		}
 	} else if *start {
@@ -220,7 +232,7 @@ func startFloatingProcess() error {
 
 // run the BPF source and attach it to raw_syscalls:sys_enter tracepoint
 func runBPFSource(pid int, profilePath string, log *logrus.Logger) error {
-
+	var wg sync.WaitGroup
 	ppid := os.Getppid()
 	parentProcess, err := os.FindProcess(ppid)
 
@@ -234,15 +246,23 @@ func runBPFSource(pid int, profilePath string, log *logrus.Logger) error {
 	m := bcc.NewModule(src, []string{})
 	defer m.Close()
 
-	tracepoint, err := m.LoadTracepoint("enter_trace")
+	enterTrace, err := m.LoadTracepoint("enter_trace")
 	if err != nil {
 		return err
 	}
 
-	log.Println("Loaded tracepoint")
+	checkExit, err := m.LoadTracepoint("check_exit")
+	if err != nil {
+		return err
+	}
 
-	if err := m.AttachTracepoint("raw_syscalls:sys_enter", tracepoint); err != nil {
-		return fmt.Errorf("unable to load tracepoint err:%q", err.Error())
+	log.Println("Loaded tracepoints")
+
+	if err := m.AttachTracepoint("raw_syscalls:sys_enter", enterTrace); err != nil {
+		return fmt.Errorf("unable to load enter_trace err:%q", err.Error())
+	}
+	if err := m.AttachTracepoint("sched:sched_process_exit", checkExit); err != nil {
+		return fmt.Errorf("unable to load check_exit err:%q", err.Error())
 	}
 
 	// send a signal to the parent process to indicate the compilation has been completed
@@ -258,9 +278,11 @@ func runBPFSource(pid int, profilePath string, log *logrus.Logger) error {
 		return fmt.Errorf("unable to init perf map err:%q", err.Error())
 	}
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
 	reachedPRCTL := false // Reached PRCTL syscall
+
+	// Initialises a wait group for the goroutine which reads the perf buffer
+	wg.Add(1)
+
 	go func() {
 		var e event
 		for {
@@ -270,48 +292,35 @@ func runBPFSource(pid int, profilePath string, log *logrus.Logger) error {
 				log.Errorf("failed to decode received data '%s': %s\n", data, err)
 				continue
 			}
-			name, err := getName(e.ID)
-			if err != nil {
-				log.Errorf("failed to get name of syscall from id : %d received : %q", e.ID, name)
-			}
-			// syscalls are not recorded until prctl() is called
-			if name == "prctl" {
-				reachedPRCTL = true
-			}
-			if reachedPRCTL {
-				syscalls[name]++
+			if e.StopTracing {
+				break
+			} else {
+				name, err := getName(e.ID)
+				if err != nil {
+					log.Errorf("failed to get name of syscall from id : %d received : %q", e.ID, name)
+				}
+				// syscalls are not recorded until prctl() is called
+				if name == "prctl" {
+					reachedPRCTL = true
+				}
+				if reachedPRCTL {
+					syscalls[name]++
+				}
 			}
 		}
+		wg.Done()
 	}()
-	log.Println("PerfMap Start")
 	perfMap.Start()
-	<-sig
-	log.Println("PerfMap Stop")
+	log.Println("PerfMap Start")
+
+	// Waiting for the goroutine which is reading the perf buffer to be done
+	// The goroutine will exit when the program exits
+	wg.Wait()
+
 	perfMap.Stop()
+	log.Println("PerfMap Stop")
 	if err := generateProfile(syscalls, profilePath); err != nil {
 		return err
-	}
-	return nil
-}
-
-// send SIGINT to the floating process reading the perfbuffer
-func sendSIGINT() error {
-	f, err := ioutil.ReadFile("pidfile")
-
-	if err != nil {
-		return err
-	}
-
-	Spid := string(f)
-
-	pid, _ := strconv.Atoi(Spid)
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return fmt.Errorf("cannot find process with PID %d \nerror msg: %q", pid, err.Error())
-	}
-	err = p.Signal(os.Interrupt)
-	if err != nil {
-		return fmt.Errorf("cannot send signal to child process err: %q", err.Error())
 	}
 	return nil
 }
