@@ -100,4 +100,3 @@ clean: ## Clean artifacts
 		bin
 	find . -name \*~ -delete
 	find . -name \#\* -delete
-
