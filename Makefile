@@ -81,7 +81,7 @@ install.tools: .install.golangci-lint .install.md2man
 
 
 .install.md2man:
-	if [ ! -x "$(GOBIN)/go-md2man" ]; then \
+	if [ ! -x "$(shell type -P go-md2man)" ]; then \
 		   $(call go-get,github.com/cpuguy83/go-md2man); \
 	fi
 
@@ -100,4 +100,3 @@ clean: ## Clean artifacts
 		bin
 	find . -name \*~ -delete
 	find . -name \#\* -delete
-	

@@ -1,0 +1,141 @@
+---
+
+env:
+    GOPATH: "/var/tmp/go"
+    CIRRUS_WORKING_DIR: "${GOPATH}/src/github.com/containers/oci-seccomp-bpf-hook"
+    SCRIPT_BASE: "./contrib/cirrus"
+    CIRRUS_SHELL: "/bin/bash"
+    IMAGE_PROJECT: "libpod-218412"
+    HOME: "/root"  # not set by default
+    GOCACHE: "${HOME}/.cache/go-build"
+
+    # VM Images are maintained in the libpod repo.
+    _BUILT_IMAGE_SUFFIX: "libpod-6296905679634432"
+    FEDORA_CACHE_IMAGE_NAME: "fedora-30-${_BUILT_IMAGE_SUFFIX}"
+    PRIOR_FEDORA_CACHE_IMAGE_NAME: "fedora-29-${_BUILT_IMAGE_SUFFIX}"
+    UBUNTU_CACHE_IMAGE_NAME: "ubuntu-19-${_BUILT_IMAGE_SUFFIX}"
+    PRIOR_UBUNTU_CACHE_IMAGE_NAME: "ubuntu-18-${_BUILT_IMAGE_SUFFIX}"
+
+
+gcp_credentials: ENCRYPTED[2ba9cffb563741f8538eab6d4a8b2d4684c0de23693a8ade80aced34596669a87a6c01e45ce45fad7f7db1d995e8c777]
+
+
+# Default VM to use unless set or modified by task
+gce_instance:
+    image_project: "${IMAGE_PROJECT}"
+    zone: "us-central1-c"  # Required by Cirrus for the time being
+    cpu: 2
+    memory: "4Gb"
+    disk: 200  # Required for performance reasons
+    image_name: "${FEDORA_CACHE_IMAGE_NAME}"
+
+
+# Update metadata on VM images referenced by this repository state
+meta_task:
+
+    container:
+        image: "quay.io/libpod/imgts:latest"  # maintained in libpod repo
+        cpu: 1
+        memory: 1
+
+    env:
+        # Space-separated list of images used by this repository state
+        IMGNAMES: |-
+            ${FEDORA_CACHE_IMAGE_NAME}
+            ${PRIOR_FEDORA_CACHE_IMAGE_NAME}
+            ${UBUNTU_CACHE_IMAGE_NAME}
+            ${PRIOR_UBUNTU_CACHE_IMAGE_NAME}
+        BUILDID: "${CIRRUS_BUILD_ID}"
+        REPOREF: "${CIRRUS_CHANGE_IN_REPO}"
+        GCPJSON: ENCRYPTED[ef070c453a5ce68efca096a940835fdca530ed0ec2272ddb52bb02bf7d70dcc3ac9697b85b1d8dcce851931e008f63c0]
+        GCPNAME: ENCRYPTED[613aa269172e01265b2ee788fcc6187826da56d3efe2e26f5790b471c9ff84c010d72dfbee1cca367ff3982d4919d617]
+        GCPPROJECT: ${IMAGE_PROJECT}
+        CIRRUS_CLONE_DEPTH: 1  # source not used
+
+    script: /usr/local/bin/entrypoint.sh
+
+
+validate_task:
+
+    container:
+        dockerfile: contrib/cirrus/Dockerfile
+
+    timeout_in: 20m
+
+    # Avoid downloading this stuff every time
+    gocache_cache:
+        folder: "${GOCACHE}"
+        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
+
+    # Avoid needless rebuilding of tooling binaries
+    gopath_cache:
+        folder: "${GOPATH}/bin"
+        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
+
+    script:
+        - $SCRIPT_BASE/setup.sh
+        - $SCRIPT_BASE/validate.sh
+
+
+build_task:
+
+    # Uses VM via default gce_instance (above)
+
+    timeout_in: 10m
+
+    # Avoid downloading this stuff every time
+    gocache_cache:
+        folder: "${GOCACHE}"
+        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
+
+    # Avoid needless rebuilding of tooling binaries
+    gopath_cache:
+        folder: "${GOPATH}/bin"
+        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
+
+    # Avoid needless rebuilding of source binaries
+    gosrc_cache:
+        folder: "${GOSRC}/bin"
+        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
+
+    script:
+        - $SCRIPT_BASE/setup.sh
+        - $SCRIPT_BASE/build.sh
+
+
+integration_test_task:
+
+    depends_on:
+        - validate
+        - build
+
+    # TODO: Support testing on other distros/versions needs updated setup.sh
+    gce_instance:
+        matrix:
+            image_name: $FEDORA_CACHE_IMAGE_NAME
+            #image_name: $PRIOR_FEDORA_CACHE_IMAGE_NAME
+            #image_name: $UBUNTU_CACHE_IMAGE_NAME
+            #image_name: $PRIOR_UBUNTU_CACHE_IMAGE_NAME
+
+    # Avoid downloading this stuff every time
+    gocache_cache:
+        folder: "${GOCACHE}"
+        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
+
+    # Avoid needless rebuilding of tooling binaries
+    gopath_cache:
+        folder: "${GOPATH}/bin"
+        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
+
+    # Avoid needless rebuilding of source binaries
+    gosrc_cache:
+        folder: "${GOSRC}/bin"
+        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
+
+    script:
+        - $SCRIPT_BASE/setup.sh
+        - $SCRIPT_BASE/test.sh
+
+    binaries_artifacts:
+        path: "bin/*"
+        type: "application/octet-stream"
