@@ -63,6 +63,7 @@ vendor:
 test-integration:
 	@echo
 	@echo "==> Running integration tests (must be run as root)"
+	./hack/check_root.sh
 	bats $(BATS_OPTS) test/
 
 
