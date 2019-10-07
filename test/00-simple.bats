@@ -4,7 +4,7 @@ load helpers
 
 @test "Podman available" {
 	# Run a container to make sure everything's in order
-	run podman run --net=host --rm ${ALPINE} ls
+	showrun $PODMAN_RUN --net=host ${ALPINE} ls
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 }
@@ -12,7 +12,7 @@ load helpers
 @test "Version check" {
 	local version
 	version=$(cat ./VERSION)
-	run ./bin/oci-seccomp-bpf-hook --version
+	showrun ./bin/oci-seccomp-bpf-hook --version
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ "${version}" ]]
 }
