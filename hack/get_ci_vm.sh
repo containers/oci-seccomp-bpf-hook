@@ -90,14 +90,14 @@ show_usage() {
 }
 
 get_env_vars() {
-    python -c '
+    python3 -c '
 import yaml
 env=yaml.load(open(".cirrus.yml"), Loader=yaml.SafeLoader)["env"]
 keys=[k for k in env if "ENCRYPTED" not in str(env[k])]
 for k,v in env.items():
     v=str(v)
     if "ENCRYPTED" not in v:
-        print "{0}=\"{1}\"".format(k, v),
+        print("{0}=\"{1}\"".format(k, v))
     '
 }
 
@@ -127,7 +127,7 @@ parse_args(){
 ##### main
 
 [[ "${SECCOMPHOOKROOT%%${SECCOMPHOOKROOT##$HOME}}" == "$HOME" ]] || \
-    show_usage "Repo clone must be sub-dir of $HOME"
+    show_usage "Repo clone must be sub-dir of $HOME: $SECCOMPHOOKROOT"
 
 cd "$SECCOMPHOOKROOT"
 

@@ -19,9 +19,11 @@ case "$OS_RELEASE_ID" in
             conmon \
             container-selinux \
             containers-common \
+            crun \
             golang \
             libseccomp \
             podman \
+            runc \
         )
         # These will not be displayed, unless there is an error
         INSTALL_PACKAGES=(\
