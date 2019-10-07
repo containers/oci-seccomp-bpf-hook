@@ -11,8 +11,7 @@ load helpers
 	tmpFile=$(mktemp)
 	echo "Temporary file: ${tmpFile}"
 
-	run podman run --net=host --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} ls
-	echo "Podman output: ${lines[*]}"
+	showrun $PODMAN_RUN --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} ls
 	[ "$status" -eq 0 ]
 	# sleep two seconds to let the hook finish writing the file
 	sleep 2
