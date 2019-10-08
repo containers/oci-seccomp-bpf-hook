@@ -132,9 +132,11 @@ func main() {
 	}
 
 	runBPF := flag.Int("r", 0, "-r [PID] run the BPF function and attach to the pid")
-	fileName := flag.String("f", "", "path of the file to save the seccomp profile")
+	outputFile := flag.String("o", "", "path of the file to save the seccomp profile")
+	inputFile := flag.String("i", "", "path of the input file")
 	start := flag.Bool("s", false, "Start the hook which would execute a process to trace syscalls made by the container")
 	printVersion := flag.Bool("version", false, "Print the hook's version")
+
 	flag.Parse()
 
 	if *printVersion {
@@ -142,9 +144,16 @@ func main() {
 		os.Exit(0)
 	}
 
-	profilePath, err := filepath.Abs(*fileName)
-	if err != nil {
-		log.Error(err)
+	if *outputFile != "" {
+		if !filepath.IsAbs(*outputFile) {
+			log.Fatal("output filepath is not absolute")
+		}
+	}
+
+	if *inputFile != "" {
+		if !filepath.IsAbs(*inputFile) {
+			log.Fatal("input filepath is not absolute")
+		}
 	}
 
 	logfilePath, err := filepath.Abs("trace-log")
@@ -161,14 +170,14 @@ func main() {
 	formatter.FullTimestamp = true
 	log.SetFormatter(formatter)
 	log.SetOutput(logfile)
+
 	if *runBPF > 0 {
-		log.Println("Filepath : ", profilePath)
-		if err := runBPFSource(*runBPF, profilePath, log); err != nil {
-			log.Error(err)
+		if err := runBPFSource(*runBPF, *outputFile, *inputFile, log); err != nil {
+			log.Fatal(err)
 		}
 	} else if *start {
 		if err := startFloatingProcess(); err != nil {
-			log.Error(err)
+			log.Fatal(err)
 		}
 	}
 }
@@ -183,7 +192,14 @@ func startFloatingProcess() error {
 		return err
 	}
 	pid := s.Pid
-	fileName := s.Annotations["io.containers.trace-syscall"]
+
+	annotation := s.Annotations["io.containers.trace-syscall"]
+
+	outputFile, inputFile, err := parseAnnotation(annotation)
+	if err != nil {
+		return err
+	}
+
 	attr := &os.ProcAttr{
 		Dir: ".",
 		Env: os.Environ(),
@@ -202,7 +218,7 @@ func startFloatingProcess() error {
 			return fmt.Errorf("cannot determine executable path:%q", err.Error())
 		}
 
-		process, err := os.StartProcess(executable, []string{"oci-seccomp-bpf-hook", "-r", strconv.Itoa(pid), "-f", fileName}, attr)
+		process, err := os.StartProcess(executable, []string{executable, "-r", strconv.Itoa(pid), "-o", outputFile, "-i", inputFile}, attr)
 		if err != nil {
 			return fmt.Errorf("cannot launch process err: %q", err.Error())
 		}
@@ -231,8 +247,9 @@ func startFloatingProcess() error {
 }
 
 // run the BPF source and attach it to raw_syscalls:sys_enter tracepoint
-func runBPFSource(pid int, profilePath string, log *logrus.Logger) error {
+func runBPFSource(pid int, profilePath string, inputFile string, log *logrus.Logger) error {
 	var wg sync.WaitGroup
+
 	ppid := os.Getppid()
 	parentProcess, err := os.FindProcess(ppid)
 
@@ -314,37 +331,53 @@ func runBPFSource(pid int, profilePath string, log *logrus.Logger) error {
 	log.Println("PerfMap Start")
 
 	// Waiting for the goroutine which is reading the perf buffer to be done
-	// The goroutine will exit when the program exits
+	// The goroutine will exit when the container exits
 	wg.Wait()
 
 	perfMap.Stop()
 	log.Println("PerfMap Stop")
-	if err := generateProfile(syscalls, profilePath); err != nil {
+	if err := generateProfile(syscalls, profilePath, inputFile); err != nil {
 		return err
 	}
 	return nil
 }
 
 // generate the seccomp profile from the syscalls provided
-func generateProfile(c map[string]int, fileName string) error {
-	s := types.Seccomp{}
+func generateProfile(calls map[string]int, fileName string, inputFile string) error {
+	outputProfile := types.Seccomp{}
+	inputProfile := types.Seccomp{}
+
+	if inputFile != "" {
+		input, err := ioutil.ReadFile(inputFile)
+		if err != nil {
+			return fmt.Errorf("cannot read input file err: %q", err)
+		}
+		err = json.Unmarshal(input, &inputProfile)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal input file err: %q", err)
+		}
+	}
+
 	var names []string
-	for s, t := range c {
-		if t > 0 {
-			names = append(names, s)
+	for syscallName, syscallID := range calls {
+		if syscallID > 0 {
+			if !profileContainsSyscall(&inputProfile, syscallName) {
+				names = append(names, syscallName)
+			}
 		}
 	}
 	sort.Strings(names)
-	s.DefaultAction = types.ActErrno
 
-	s.Syscalls = []*types.Syscall{
-		{
-			Action: types.ActAllow,
-			Names:  names,
-			Args:   []*types.Arg{},
-		},
-	}
-	sJSON, err := json.Marshal(s)
+	outputProfile = inputProfile
+	outputProfile.DefaultAction = types.ActErrno
+
+	outputProfile.Syscalls = append(outputProfile.Syscalls, &types.Syscall{
+		Action: types.ActAllow,
+		Names:  names,
+		Args:   []*types.Arg{},
+	})
+
+	sJSON, err := json.Marshal(outputProfile)
 	if err != nil {
 		return err
 	}
@@ -354,8 +387,64 @@ func generateProfile(c map[string]int, fileName string) error {
 	return nil
 }
 
+func parseAnnotation(annotation string) (outputFile string, inputFile string, err error) {
+	annotationSplit := strings.Split(annotation, ";")
+	if len(annotationSplit) > 2 {
+		return "", "", fmt.Errorf("The annotation must have only one \";\"")
+	}
+	for _, path := range annotationSplit {
+		if strings.HasPrefix(path, "if:") {
+			inputFile = strings.TrimSpace(strings.TrimPrefix(path, "if:"))
+			if !filepath.IsAbs(inputFile) {
+				return "", "", fmt.Errorf("The path to the input file is not absolute: %q", inputFile)
+			}
+
+			// Check if input file exists and is not malformed
+
+			inputProfile := types.Seccomp{}
+			input, err := ioutil.ReadFile(inputFile)
+			if err != nil {
+				return "", "", fmt.Errorf("cannot read input file %q err: %q", inputFile, err)
+			}
+			err = json.Unmarshal(input, &inputProfile)
+			if err != nil {
+				return "", "", fmt.Errorf("cannot unmarshal input file %q err: %q", inputFile, err)
+			}
+
+			continue
+		}
+		if strings.HasPrefix(path, "of:") {
+			outputFile = strings.TrimSpace(strings.TrimPrefix(path, "of:"))
+			if !filepath.IsAbs(outputFile) {
+				return "", "", fmt.Errorf("The path to the output file is not absolute: %q", outputFile)
+			}
+			continue
+		}
+		return "", "", fmt.Errorf("%q not an input or an output annotation", path)
+	}
+	if outputFile == "" {
+		return "", "", fmt.Errorf("providing output file is mandatory")
+	}
+	return outputFile, inputFile, nil
+}
+
 // get the name of the syscall from it's ID
 func getName(id uint32) (string, error) {
 	name, err := seccomp.ScmpSyscall(id).GetName()
 	return name, err
+}
+
+// checks if the input profile contains the syscalls recorded while tracing the process
+func profileContainsSyscall(input *types.Seccomp, syscall string) bool {
+	for _, s := range input.Syscalls {
+		if s.Name == syscall {
+			return true
+		}
+		for _, name := range s.Names {
+			if name == syscall {
+				return true
+			}
+		}
+	}
+	return false
 }

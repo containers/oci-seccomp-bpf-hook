@@ -1,0 +1,15 @@
+{
+    "defaultAction": "SCMP_ACT_ERRNO",
+    "syscalls": [
+        {
+            "names": [
+                "mkdir"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "args": [],
+            "comment": "",
+            "includes": {},
+            "excludes": {}
+        }
+    ]
+}
