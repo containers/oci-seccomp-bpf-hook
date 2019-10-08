@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/iovisor/gobpf/bcc" //nolint
@@ -25,6 +26,10 @@ import (
 	"github.com/sirupsen/logrus"
 	lsyslog "github.com/sirupsen/logrus/hooks/syslog"
 )
+
+// ebpfTimout is the timeout in seconds to wait for the child process to signal
+// that the eBPF program finished compiling and attached to the tracee.
+const ebpfTimeout = 10
 
 // event struct used to read data from the perf ring buffer
 type event struct {
@@ -131,6 +136,8 @@ func main() {
 		log.Hooks.Add(hook)
 	}
 
+	log.Infof("Started OCI seccomp hook version %s", version)
+
 	runBPF := flag.Int("r", 0, "-r [PID] run the BPF function and attach to the pid")
 	outputFile := flag.String("o", "", "path of the file to save the seccomp profile")
 	inputFile := flag.String("i", "", "path of the input file")
@@ -223,7 +230,16 @@ func startFloatingProcess() error {
 			return fmt.Errorf("cannot launch process err: %q", err.Error())
 		}
 
-		<-sig
+		select {
+		case <-sig:
+			// Nothing to do, we can safely detach now.
+			break
+		case <-time.After(ebpfTimeout * time.Second):
+			// For whatever reason, the child process did not send the signal
+			// within the timeout.  So kill it and return an error to runc.
+			process.Kill()
+			return fmt.Errorf("eBPF program didn't compile and attach within %d seconds", ebpfTimeout)
+		}
 
 		processPID := process.Pid
 		f, err := os.Create("pidfile")
@@ -257,7 +273,7 @@ func runBPFSource(pid int, profilePath string, inputFile string, log *logrus.Log
 		return fmt.Errorf("cannot find the parent process pid %d : %q", ppid, err)
 	}
 
-	log.Println("Running floating process PID to attach:", pid)
+	log.Infof("Running floating process PID to attach:", pid)
 	syscalls := make(map[string]int, 303)
 	src := strings.Replace(source, "$PARENT_PID", strconv.Itoa(pid), -1)
 	m := bcc.NewModule(src, []string{})
@@ -273,7 +289,7 @@ func runBPFSource(pid int, profilePath string, inputFile string, log *logrus.Log
 		return err
 	}
 
-	log.Println("Loaded tracepoints")
+	log.Info("Loaded tracepoints")
 
 	if err := m.AttachTracepoint("raw_syscalls:sys_enter", enterTrace); err != nil {
 		return fmt.Errorf("unable to load enter_trace err:%q", err.Error())
@@ -328,14 +344,14 @@ func runBPFSource(pid int, profilePath string, inputFile string, log *logrus.Log
 		wg.Done()
 	}()
 	perfMap.Start()
-	log.Println("PerfMap Start")
+	log.Info("PerfMap Start")
 
 	// Waiting for the goroutine which is reading the perf buffer to be done
 	// The goroutine will exit when the container exits
 	wg.Wait()
 
 	perfMap.Stop()
-	log.Println("PerfMap Stop")
+	log.Info("PerfMap Stop")
 	if err := generateProfile(syscalls, profilePath, inputFile); err != nil {
 		return err
 	}
