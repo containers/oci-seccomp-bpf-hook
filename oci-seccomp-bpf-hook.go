@@ -24,7 +24,7 @@ import (
 	spec "github.com/opencontainers/runtime-spec/specs-go"
 	seccomp "github.com/seccomp/libseccomp-golang"
 	"github.com/sirupsen/logrus"
-	lsyslog "github.com/sirupsen/logrus/hooks/syslog"
+	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
 )
 
 // ebpfTimout is the timeout in seconds to wait for the child process to signal
@@ -129,21 +129,17 @@ int check_exit(struct tracepoint__sched__sched_process_exit* args)
 var version string
 
 func main() {
-
-	log := logrus.New()
-	hook, err := lsyslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
+	hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
 	if err == nil {
-		log.Hooks.Add(hook)
+		logrus.AddHook(hook)
 	}
-
-	log.Infof("Started OCI seccomp hook version %s", version)
+	logrus.Infof("Started OCI seccomp hook version %s", version)
 
 	runBPF := flag.Int("r", 0, "-r [PID] run the BPF function and attach to the pid")
 	outputFile := flag.String("o", "", "path of the file to save the seccomp profile")
 	inputFile := flag.String("i", "", "path of the input file")
 	start := flag.Bool("s", false, "Start the hook which would execute a process to trace syscalls made by the container")
 	printVersion := flag.Bool("version", false, "Print the hook's version")
-
 	flag.Parse()
 
 	if *printVersion {
@@ -153,38 +149,23 @@ func main() {
 
 	if *outputFile != "" {
 		if !filepath.IsAbs(*outputFile) {
-			log.Fatal("output filepath is not absolute")
+			logrus.Fatal("output filepath is not absolute")
 		}
 	}
 
 	if *inputFile != "" {
 		if !filepath.IsAbs(*inputFile) {
-			log.Fatal("input filepath is not absolute")
+			logrus.Fatal("input filepath is not absolute")
 		}
 	}
 
-	logfilePath, err := filepath.Abs("trace-log")
-	if err != nil {
-		log.Error(err)
-	}
-	logfile, err := os.OpenFile(logfilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		log.Errorf("error opening file: %v", err)
-	}
-
-	defer logfile.Close()
-	formatter := new(logrus.TextFormatter)
-	formatter.FullTimestamp = true
-	log.SetFormatter(formatter)
-	log.SetOutput(logfile)
-
 	if *runBPF > 0 {
-		if err := runBPFSource(*runBPF, *outputFile, *inputFile, log); err != nil {
-			log.Fatal(err)
+		if err := runBPFSource(*runBPF, *outputFile, *inputFile); err != nil {
+			logrus.Fatal(err)
 		}
 	} else if *start {
 		if err := startFloatingProcess(); err != nil {
-			log.Fatal(err)
+			logrus.Fatal(err)
 		}
 	}
 }
@@ -225,7 +206,7 @@ func startFloatingProcess() error {
 			return fmt.Errorf("cannot determine executable path:%q", err.Error())
 		}
 
-		process, err := os.StartProcess(executable, []string{executable, "-r", strconv.Itoa(pid), "-o", outputFile, "-i", inputFile}, attr)
+		process, err := os.StartProcess(executable, []string{"oci-seccomp-bpf-hook", "-r", strconv.Itoa(pid), "-o", outputFile, "-i", inputFile}, attr)
 		if err != nil {
 			return fmt.Errorf("cannot launch process err: %q", err.Error())
 		}
@@ -263,7 +244,7 @@ func startFloatingProcess() error {
 }
 
 // run the BPF source and attach it to raw_syscalls:sys_enter tracepoint
-func runBPFSource(pid int, profilePath string, inputFile string, log *logrus.Logger) error {
+func runBPFSource(pid int, profilePath string, inputFile string) error {
 	var wg sync.WaitGroup
 
 	ppid := os.Getppid()
@@ -273,7 +254,7 @@ func runBPFSource(pid int, profilePath string, inputFile string, log *logrus.Log
 		return fmt.Errorf("cannot find the parent process pid %d : %q", ppid, err)
 	}
 
-	log.Infof("Running floating process PID to attach:", pid)
+	logrus.Infof("Running floating process PID to attach: %d", pid)
 	syscalls := make(map[string]int, 303)
 	src := strings.Replace(source, "$PARENT_PID", strconv.Itoa(pid), -1)
 	m := bcc.NewModule(src, []string{})
@@ -289,7 +270,7 @@ func runBPFSource(pid int, profilePath string, inputFile string, log *logrus.Log
 		return err
 	}
 
-	log.Info("Loaded tracepoints")
+	logrus.Info("Loaded tracepoints")
 
 	if err := m.AttachTracepoint("raw_syscalls:sys_enter", enterTrace); err != nil {
 		return fmt.Errorf("unable to load enter_trace err:%q", err.Error())
@@ -322,7 +303,7 @@ func runBPFSource(pid int, profilePath string, inputFile string, log *logrus.Log
 			data := <-channel
 			err := binary.Read(bytes.NewBuffer(data), binary.LittleEndian, &e)
 			if err != nil {
-				log.Errorf("failed to decode received data '%s': %s\n", data, err)
+				logrus.Errorf("failed to decode received data '%s': %s\n", data, err)
 				continue
 			}
 			if e.StopTracing {
@@ -330,7 +311,7 @@ func runBPFSource(pid int, profilePath string, inputFile string, log *logrus.Log
 			} else {
 				name, err := getName(e.ID)
 				if err != nil {
-					log.Errorf("failed to get name of syscall from id : %d received : %q", e.ID, name)
+					logrus.Errorf("failed to get name of syscall from id : %d received : %q", e.ID, name)
 				}
 				// syscalls are not recorded until prctl() is called
 				if name == "prctl" {
@@ -344,14 +325,14 @@ func runBPFSource(pid int, profilePath string, inputFile string, log *logrus.Log
 		wg.Done()
 	}()
 	perfMap.Start()
-	log.Info("PerfMap Start")
+	logrus.Info("PerfMap Start")
 
 	// Waiting for the goroutine which is reading the perf buffer to be done
 	// The goroutine will exit when the container exits
 	wg.Wait()
 
 	perfMap.Stop()
-	log.Info("PerfMap Stop")
+	logrus.Info("PerfMap Stop")
 	if err := generateProfile(syscalls, profilePath, inputFile); err != nil {
 		return err
 	}

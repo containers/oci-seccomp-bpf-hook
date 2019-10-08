@@ -18,7 +18,7 @@ load helpers
 	sleep 2
 
 	journalctl --since "${since}" -t oci-seccomp-bpf-hook -q
-	msg=$(journalctl --since "${since}" | grep 'Started OCI seccomp hook version ')
+	msg=$(journalctl --since "${since}" -t "oci-seccomp-bpf-hook")
 	echo "Message: '$msg'"
 	[ ! -z "${msg}" ]
 }
