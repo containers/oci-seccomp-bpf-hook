@@ -56,7 +56,7 @@ load helpers
 	[ "$status" -eq 0 ]
 }
 
-@test "Containers fails to run blocked syscall"{
+@test "Containers fails to run blocked syscall" {
 	local tmpFile
 	local size
 
@@ -77,7 +77,7 @@ load helpers
 	[ "$status" -ne 0 ]
 }
 
-@test "Extend existing seccomp profile"{
+@test "Extend existing seccomp profile" {
 	local tmpFile1
 	local tmpFile2
 	local size 
@@ -114,7 +114,7 @@ load helpers
 	[ "$status" -eq 0 ]
 }
 
-@test "syscall blocked in input profile remains blocked in output profile"{
+@test "syscall blocked in input profile remains blocked in output profile" {
 	local tmpFile
 	local size 
 
