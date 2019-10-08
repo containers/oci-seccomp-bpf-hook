@@ -52,11 +52,12 @@ load helpers
 	echo "Size of generated file: ${size}"
 	[ "${size}" -gt 0 ]
 
-	run podman run --net=host --security-opt seccomp=${tmpFile} alpine ls
+	run podman run --net=host --security-opt seccomp=${tmpFile} ${ALPINE} ls
+	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 }
 
-@test "Containers fails to run blocked syscall"{
+@test "Containers fails to run blocked syscall" {
 	local tmpFile
 	local size
 
@@ -73,11 +74,16 @@ load helpers
 	echo "Size of generated file: ${size}"
 	[ "${size}" -gt 0 ]
 
-	run podman run --net=host --security-opt seccomp=${tmpFile} alpine sync
+	run podman run --net=host --security-opt seccomp=${tmpFile} ${ALPINE} ls
+	echo "Podman output: ${lines[*]}"
+	[ "$status" -eq 0 ]
+
+	run podman run --net=host --security-opt seccomp=${tmpFile} ${ALPINE} ping -c3 google.com
+	echo "Podman output: ${lines[*]}"
 	[ "$status" -ne 0 ]
 }
 
-@test "Extend existing seccomp profile"{
+@test "Extend existing seccomp profile" {
 	local tmpFile1
 	local tmpFile2
 	local size 
@@ -96,25 +102,29 @@ load helpers
 	echo "Size of the first generated file: ${size}"
 	[ "${size}" -gt 0 ]
 
-	run podman run --net=host --security-opt seccomp=${tmpFile1} alpine ping -c3 google.com
+	run podman run --net=host --security-opt seccomp=${tmpFile1} ${ALPINE} ping -c3 google.com
+	echo "Podman output: ${lines[*]}"
 	[ "$status" -ne 0 ]
 
 	run podman run --net=host --annotation io.containers.trace-syscall="if:${tmpFile1};of:${tmpFile2}" ${ALPINE} ping -c3 google.com
+	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
-	sleep 2
-
+	sleep 2	# sleep two seconds to let the hook finish writing the file
+	
 	size=$(du -b ${tmpFile2} | awk '{ print $1 }')
 	echo "Size of the second generated file: ${size}"
 	[ "${size}" -gt 0 ]
 
-	run podman run --net=host --security-opt seccomp=${tmpFile2} alpine ls /
+	run podman run --net=host --security-opt seccomp=${tmpFile2} ${ALPINE} ls /
+	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 
-	run podman run --net=host --security-opt seccomp=${tmpFile2} alpine ping -c3 google.com
+	run podman run --net=host --security-opt seccomp=${tmpFile2} ${ALPINE} ping -c3 google.com
+	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 }
 
-@test "syscall blocked in input profile remains blocked in output profile"{
+@test "Syscall blocked in input profile remains blocked in output profile" {
 	local tmpFile
 	local size 
 
@@ -122,6 +132,7 @@ load helpers
 	echo "Temporary file : ${tmpFile}"
 
 	run podman run --net=host --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} mkdir /foo
+	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 	# sleep two seconds to let the hook finish writing the file
 	sleep 2
@@ -130,17 +141,21 @@ load helpers
 	echo "Size of the first generated file: ${size}"
 	[ "${size}" -gt 0 ]
 
-	run podman run --net=host --security-opt seccomp=${tmpFile} alpine mkdir /foo
+	run podman run --net=host --security-opt seccomp=${tmpFile} ${ALPINE} mkdir /foo
+	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 
 	run podman run --net=host --annotation io.containers.trace-syscall="if:${BLOCK_MKDIR};of:${tmpFile}" ${ALPINE} mkdir /foo
+	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
+	# sleep two seconds to let the hook finish writing the file
 	sleep 2
 
 	size=$(du -b ${tmpFile} | awk '{ print $1 }')
 	echo "Size of the second generated file: ${size}"
 	[ "${size}" -gt 0 ]
 
-	run podman run --net=host --security-opt seccomp=${tmpFile} alpine mkdir /foo
+	run podman run --net=host --security-opt seccomp=${tmpFile} ${ALPINE} mkdir /foo
+	echo "Podman output: ${lines[*]}"
 	[ "$status" -ne 0 ]
 }

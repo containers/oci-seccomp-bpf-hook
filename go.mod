@@ -10,4 +10,5 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.1
 	github.com/seccomp/libseccomp-golang v0.9.1
 	github.com/sirupsen/logrus v1.4.2
+	github.com/stretchr/testify v1.2.2
 )
