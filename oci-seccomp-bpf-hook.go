@@ -218,7 +218,9 @@ func startFloatingProcess() error {
 		case <-time.After(ebpfTimeout * time.Second):
 			// For whatever reason, the child process did not send the signal
 			// within the timeout.  So kill it and return an error to runc.
-			process.Kill()
+			if err := process.Kill(); err != nil {
+				logrus.Errorf("error killing child process: %v", err)
+			}
 			return fmt.Errorf("eBPF program didn't compile and attach within %d seconds", ebpfTimeout)
 		}
 
