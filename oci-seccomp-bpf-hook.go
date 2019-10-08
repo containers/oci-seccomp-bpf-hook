@@ -20,113 +20,30 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/iovisor/gobpf/bcc" //nolint
+	"github.com/iovisor/gobpf/bcc"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/pkg/errors"
 	seccomp "github.com/seccomp/libseccomp-golang"
 	"github.com/sirupsen/logrus"
 	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
 )
 
-// ebpfTimout is the timeout in seconds to wait for the child process to signal
-// that the eBPF program finished compiling and attached to the tracee.
-const ebpfTimeout = 10
+const (
+	// ebpfTimout is the timeout in seconds to wait for the child process to signal
+	// that the eBPF program finished compiling and attached to the tracee.
+	ebpfTimeout = 10
+	// inputPrefix is the prefix for input files in the runtime annotation.
+	inputPrefix = "if:"
+	// outputPrefix is the prefix for output files in the runtime annotation.
+	outputPrefix = "of:"
+)
 
-// event struct used to read data from the perf ring buffer
-type event struct {
-	// PID of the process making the syscall
-	Pid uint32
-	// syscall number
-	ID uint32
-	// Command which makes the syscall
-	Command [16]byte
-	// Stops tracing syscalls if true
-	StopTracing bool
-}
-
-// the source is a bpf program compiled at runtime. Some macro's like
-// BPF_HASH and BPF_PERF_OUTPUT are expanded during compilation
-// by bcc. $PARENT_PID get's replaced before compilation with the PID of the container
-// Complete documentation is available at
-// https://github.com/iovisor/bcc/blob/master/docs/reference_guide.md
-const source string = `
-#include <linux/bpf.h>
-#include <linux/nsproxy.h>
-#include <linux/pid_namespace.h>
-#include <linux/ns_common.h>
-#include <linux/sched.h>
-#include <linux/tracepoint.h>
-
-// BPF_HASH used to store the PID namespace of the parent PID
-// of the processes inside the container.
-BPF_HASH(parent_namespace, u64, unsigned int);
-
-// Opens a custom BPF table to push data to user space via perf ring buffer
-BPF_PERF_OUTPUT(events);
-
-// data_t used to store the data received from the event
-struct syscall_data {
-    // PID of the process
-    u32 pid;
-    // the syscall number
-    u32 id;
-    // command which is making the syscall
-    char comm[16];
-    // Stops tracing syscalls if true
-    bool stopTracing;
-};
-
-// enter_trace : function is attached to the kernel tracepoint raw_syscalls:sys_enter it is
-// called whenever a syscall is made. The function stores the pid_namespace (task->nsproxy->pid_ns_for_children->ns.inum) of the PID which
-// starts the container in the BPF_HASH called parent_namespace.
-// The data of the syscall made by the process with the same pid_namespace as the parent_namespace is pushed to
-// userspace using perf ring buffer
-
-// specification of args from sys/kernel/debug/tracing/events/raw_syscalls/sys_enter/format
-int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
-{
-    struct syscall_data data = {};
-    u64 key = 0;
-    unsigned int zero = 0;
-    struct task_struct* task;
-
-    data.pid = bpf_get_current_pid_tgid();
-    data.id = (int)args->id;
-    bpf_get_current_comm(&data.comm, sizeof(data.comm));
-
-    task = (struct task_struct*)bpf_get_current_task();
-    struct nsproxy* ns = task->nsproxy;
-    unsigned int inum = ns->pid_ns_for_children->ns.inum;
-
-    if (data.pid == $PARENT_PID) {
-        parent_namespace.update(&key, &inum);
-    }
-    unsigned int* parent_inum = parent_namespace.lookup_or_init(&key, &zero);
-
-    if (*parent_inum != inum) {
-        return 0;
-    }
-
-    data.stopTracing = false;
-    events.perf_submit(args, &data, sizeof(data));
-    return 0;
-}
-
-// Checks if the container has exited
-int check_exit(struct tracepoint__sched__sched_process_exit* args)
-{
-    if (args->pid == $PARENT_PID) {
-        struct syscall_data data = {};
-        data.pid = args->pid;
-        data.id = 0;
-        data.stopTracing = true;
-        events.perf_submit(args, &data, sizeof(data));
-    }
-    return 0;
-}
-`
-
-// version is the version string of the hook. Set at build time.
-var version string
+var (
+	// version is the version string of the hook. Set at build time.
+	version string
+	// errInvalidAnnotation denotes an error for an invalid runtime annotation.
+	errInvalidAnnotation = errors.New("invalid annotation")
+)
 
 func main() {
 	hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
@@ -164,14 +81,15 @@ func main() {
 			logrus.Fatal(err)
 		}
 	} else if *start {
-		if err := startFloatingProcess(); err != nil {
+		if err := detachAndTrace(); err != nil {
 			logrus.Fatal(err)
 		}
 	}
 }
 
-// Start a process which runs the BPF source and detach the process
-func startFloatingProcess() error {
+// detachAndTrace re-executes the current executable to "fork" in go-ish way and
+// traces the provided PID.
+func detachAndTrace() error {
 	var s spec.State
 	reader := bufio.NewReader(os.Stdin)
 	decoder := json.NewDecoder(reader)
@@ -203,12 +121,12 @@ func startFloatingProcess() error {
 
 		executable, err := os.Executable()
 		if err != nil {
-			return fmt.Errorf("cannot determine executable path:%q", err.Error())
+			return errors.Wrap(err, "cannot determine executable")
 		}
 
 		process, err := os.StartProcess(executable, []string{"oci-seccomp-bpf-hook", "-r", strconv.Itoa(pid), "-o", outputFile, "-i", inputFile}, attr)
 		if err != nil {
-			return fmt.Errorf("cannot launch process err: %q", err.Error())
+			return errors.Wrap(err, "cannot re-execute")
 		}
 
 		select {
@@ -221,26 +139,26 @@ func startFloatingProcess() error {
 			if err := process.Kill(); err != nil {
 				logrus.Errorf("error killing child process: %v", err)
 			}
-			return fmt.Errorf("eBPF program didn't compile and attach within %d seconds", ebpfTimeout)
+			return errors.Errorf("eBPF program didn't compile and attach within %d seconds", ebpfTimeout)
 		}
 
 		processPID := process.Pid
 		f, err := os.Create("pidfile")
 		if err != nil {
-			return fmt.Errorf("cannot write pid to file err:%q", err.Error())
+			return errors.Wrap(err, "cannot write pid to file err")
 		}
 		defer f.Close()
 		_, err = f.WriteString(strconv.Itoa(processPID))
 		if err != nil {
-			return fmt.Errorf("cannot write pid to the file")
+			return errors.Errorf("cannot write pid to the file")
 		}
 		err = process.Release()
 		if err != nil {
-			return fmt.Errorf("cannot detach process err:%q", err.Error())
+			return errors.Wrap(err, "cannot detach process err")
 		}
 
 	} else {
-		return fmt.Errorf("container not running")
+		return errors.Errorf("container not running")
 	}
 	return nil
 }
@@ -253,7 +171,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) error {
 	parentProcess, err := os.FindProcess(ppid)
 
 	if err != nil {
-		return fmt.Errorf("cannot find the parent process pid %d : %q", ppid, err)
+		return errors.Wrapf(err, "cannot find parent process %d", ppid)
 	}
 
 	logrus.Infof("Running floating process PID to attach: %d", pid)
@@ -264,24 +182,23 @@ func runBPFSource(pid int, profilePath string, inputFile string) error {
 
 	enterTrace, err := m.LoadTracepoint("enter_trace")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error loading tracepoint")
 	}
-
 	checkExit, err := m.LoadTracepoint("check_exit")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error loading tracepoint")
 	}
-
 	logrus.Info("Loaded tracepoints")
 
 	if err := m.AttachTracepoint("raw_syscalls:sys_enter", enterTrace); err != nil {
-		return fmt.Errorf("unable to load enter_trace err:%q", err.Error())
+		return errors.Wrap(err, "error attaching to tracepoint")
 	}
 	if err := m.AttachTracepoint("sched:sched_process_exit", checkExit); err != nil {
-		return fmt.Errorf("unable to load check_exit err:%q", err.Error())
+		return errors.Wrap(err, "error attaching to tracepoint")
 	}
 
-	// send a signal to the parent process to indicate the compilation has been completed
+	// Send a signal to the parent process to indicate the compilation has been
+	// completed.
 	err = parentProcess.Signal(syscall.SIGUSR1)
 	if err != nil {
 		return err
@@ -291,14 +208,12 @@ func runBPFSource(pid int, profilePath string, inputFile string) error {
 	channel := make(chan []byte)
 	perfMap, err := bcc.InitPerfMap(table, channel)
 	if err != nil {
-		return fmt.Errorf("unable to init perf map err:%q", err.Error())
+		return errors.Wrap(err, "error initializing perf map")
 	}
 
-	reachedPRCTL := false // Reached PRCTL syscall
-
-	// Initialises a wait group for the goroutine which reads the perf buffer
+	// Initialize the wait group used to wait for the tracing to be finished.
 	wg.Add(1)
-
+	recordSyscalls := false
 	go func() {
 		var e event
 		for {
@@ -311,15 +226,18 @@ func runBPFSource(pid int, profilePath string, inputFile string) error {
 			if e.StopTracing {
 				break
 			} else {
-				name, err := getName(e.ID)
+				name, err := syscallIDtoName(e.ID)
 				if err != nil {
-					logrus.Errorf("failed to get name of syscall from id : %d received : %q", e.ID, name)
+					logrus.Errorf("error getting the name for syscall ID %d", e.ID)
 				}
-				// syscalls are not recorded until prctl() is called
+				// Syscalls are not recorded until prctl() is called. The first
+				// invocation of prctl is guaranteed to happen by the supported
+				// OCI runtimes (i.e., runc and crun) as it's being called when
+				// setting the seccomp profile.
 				if name == "prctl" {
-					reachedPRCTL = true
+					recordSyscalls = true
 				}
-				if reachedPRCTL {
+				if recordSyscalls {
 					syscalls[name]++
 				}
 			}
@@ -336,29 +254,30 @@ func runBPFSource(pid int, profilePath string, inputFile string) error {
 	perfMap.Stop()
 	logrus.Info("PerfMap Stop")
 	if err := generateProfile(syscalls, profilePath, inputFile); err != nil {
-		return err
+		return errors.Wrap(err, "error generating final seccomp profile")
 	}
 	return nil
 }
 
-// generate the seccomp profile from the syscalls provided
-func generateProfile(calls map[string]int, fileName string, inputFile string) error {
+// generateProfile generates the seccomp profile from the specified syscalls and
+// the input file.
+func generateProfile(syscalls map[string]int, profilePath string, inputFile string) error {
 	outputProfile := types.Seccomp{}
 	inputProfile := types.Seccomp{}
 
 	if inputFile != "" {
 		input, err := ioutil.ReadFile(inputFile)
 		if err != nil {
-			return fmt.Errorf("cannot read input file err: %q", err)
+			return errors.Wrap(err, "error reading input file")
 		}
 		err = json.Unmarshal(input, &inputProfile)
 		if err != nil {
-			return fmt.Errorf("cannot unmarshal input file err: %q", err)
+			return errors.Wrap(err, "error parsing input file")
 		}
 	}
 
 	var names []string
-	for syscallName, syscallID := range calls {
+	for syscallName, syscallID := range syscalls {
 		if syscallID > 0 {
 			if !profileContainsSyscall(&inputProfile, syscallName) {
 				names = append(names, syscallName)
@@ -378,64 +297,68 @@ func generateProfile(calls map[string]int, fileName string, inputFile string) er
 
 	sJSON, err := json.Marshal(outputProfile)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error writing seccomp profile")
 	}
-	if err := ioutil.WriteFile(fileName, sJSON, 0644); err != nil {
-		return err
+	if err := ioutil.WriteFile(profilePath, sJSON, 0644); err != nil {
+		return errors.Wrap(err, "error writing seccomp profile")
 	}
 	return nil
 }
 
+// parseAnnotation parses the provided annotation and extracts the mandatory
+// output file and the optional input file.
 func parseAnnotation(annotation string) (outputFile string, inputFile string, err error) {
 	annotationSplit := strings.Split(annotation, ";")
 	if len(annotationSplit) > 2 {
-		return "", "", fmt.Errorf("The annotation must have only one \";\"")
+		return "", "", errors.Wrapf(errInvalidAnnotation, "more than one semi-colon: %q", annotation)
 	}
 	for _, path := range annotationSplit {
-		if strings.HasPrefix(path, "if:") {
-			inputFile = strings.TrimSpace(strings.TrimPrefix(path, "if:"))
+		switch {
+		// Input profile
+		case strings.HasPrefix(path, "if:"):
+			inputFile = strings.TrimSpace(strings.TrimPrefix(path, inputPrefix))
 			if !filepath.IsAbs(inputFile) {
-				return "", "", fmt.Errorf("The path to the input file is not absolute: %q", inputFile)
+				return "", "", errors.Wrapf(errInvalidAnnotation, "paths must be absolute: %q", inputFile)
 			}
-
-			// Check if input file exists and is not malformed
-
 			inputProfile := types.Seccomp{}
 			input, err := ioutil.ReadFile(inputFile)
 			if err != nil {
-				return "", "", fmt.Errorf("cannot read input file %q err: %q", inputFile, err)
+				return "", "", errors.Wrapf(errInvalidAnnotation, "error reading input file: %q", inputFile)
 			}
 			err = json.Unmarshal(input, &inputProfile)
 			if err != nil {
-				return "", "", fmt.Errorf("cannot unmarshal input file %q err: %q", inputFile, err)
+				return "", "", errors.Wrapf(errInvalidAnnotation, "error parsing input file: %q", inputFile)
 			}
 
-			continue
-		}
-		if strings.HasPrefix(path, "of:") {
-			outputFile = strings.TrimSpace(strings.TrimPrefix(path, "of:"))
+		// Output profile
+		case strings.HasPrefix(path, "of:"):
+			outputFile = strings.TrimSpace(strings.TrimPrefix(path, outputPrefix))
 			if !filepath.IsAbs(outputFile) {
-				return "", "", fmt.Errorf("The path to the output file is not absolute: %q", outputFile)
+				return "", "", errors.Wrapf(errInvalidAnnotation, "paths must be absolute: %q", inputFile)
 			}
-			continue
+
+		// Unsupported default
+		default:
+			return "", "", errors.Wrapf(errInvalidAnnotation, "must start %q or %q prefix", inputPrefix, outputPrefix)
 		}
-		return "", "", fmt.Errorf("%q not an input or an output annotation", path)
 	}
+
 	if outputFile == "" {
-		return "", "", fmt.Errorf("providing output file is mandatory")
+		return "", "", errors.Wrap(errInvalidAnnotation, "providing output file is mandatory")
 	}
+
 	return outputFile, inputFile, nil
 }
 
-// get the name of the syscall from it's ID
-func getName(id uint32) (string, error) {
+// syscallIDtoName returns the syscall name for the specified ID.
+func syscallIDtoName(id uint32) (string, error) {
 	name, err := seccomp.ScmpSyscall(id).GetName()
 	return name, err
 }
 
-// checks if the input profile contains the syscalls recorded while tracing the process
-func profileContainsSyscall(input *types.Seccomp, syscall string) bool {
-	for _, s := range input.Syscalls {
+// profileContainsSyscall checks if the input profile contains the syscall..
+func profileContainsSyscall(profile *types.Seccomp, syscall string) bool {
+	for _, s := range profile.Syscalls {
 		if s.Name == syscall {
 			return true
 		}

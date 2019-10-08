@@ -22,6 +22,8 @@ github.com/iovisor/gobpf/pkg/cpuonline
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/opencontainers/runtime-spec v1.0.1
 github.com/opencontainers/runtime-spec/specs-go
+# github.com/pkg/errors v0.8.1
+github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/seccomp/libseccomp-golang v0.9.1
