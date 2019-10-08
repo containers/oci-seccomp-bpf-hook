@@ -23,6 +23,7 @@ script:
 	- make binary
 	- make vendor
 	- ./hack/tree_status.sh
+	- make test-unit
 	- make docs
 	- sudo make install
 	- sudo make test-integration

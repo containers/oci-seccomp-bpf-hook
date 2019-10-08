@@ -66,6 +66,10 @@ test-integration:
 	./hack/check_root.sh
 	bats $(BATS_OPTS) test/
 
+.PHONY: test-unit
+test-unit:
+	$(GO) test -v $(PROJECT)
+
 
 .PHONY: install.tools
 install.tools: .install.golangci-lint .install.md2man
