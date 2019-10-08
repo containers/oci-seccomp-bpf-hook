@@ -1,2 +1,2 @@
 ALPINE="docker.io/library/alpine:latest"
-BLOCK_MKDIR="./fixtures/block-mkdir.json"
+BLOCK_MKDIR=$(realpath ./test/fixtures/block-mkdir.json)
