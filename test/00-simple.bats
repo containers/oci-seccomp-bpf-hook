@@ -2,6 +2,10 @@
 
 load helpers
 
+@test "Connecting to google works" {
+    showrun $CONN_CHECK_CMD
+}
+
 @test "Podman available" {
 	# Run a container to make sure everything's in order
 	showrun $PODMAN_RUN ${ALPINE} ls
@@ -72,7 +76,7 @@ load helpers
 	showrun $PODMAN_RUN --security-opt seccomp=${tmpFile} ${ALPINE} ls
 	[ "$status" -eq 0 ]
 
-	showrun $PODMAN_RUN --security-opt seccomp=${tmpFile} ${ALPINE} ping -c3 google.com
+	showrun $PODMAN_RUN --security-opt seccomp=${tmpFile} ${ALPINE} $CONN_CHECK_CMD
 	[ "$status" -ne 0 ]
 }
 
@@ -95,7 +99,7 @@ load helpers
 	echo "Size of the first generated file: ${size}"
 	[ "${size}" -gt 0 ]
 
-	showrun $PODMAN_RUN --security-opt seccomp=${tmpFile1} ${ALPINE} ping -c3 google.com
+	showrun $PODMAN_RUN --security-opt seccomp=${tmpFile1} ${ALPINE} $CONN_CHECK_CMD
 	[ "$status" -ne 0 ]
 
 	showrun $PODMAN_RUN --annotation io.containers.trace-syscall="if:${tmpFile1};of:${tmpFile2}" ${ALPINE} ping -c3 google.com
@@ -109,7 +113,7 @@ load helpers
 	showrun $PODMAN_RUN --security-opt seccomp=${tmpFile2} ${ALPINE} ls /
 	[ "$status" -eq 0 ]
 
-	showrun $PODMAN_RUN --security-opt seccomp=${tmpFile2} ${ALPINE} ping -c3 google.com
+	showrun $PODMAN_RUN --security-opt seccomp=${tmpFile2} ${ALPINE} $CONN_CHECK_CMD
 	[ "$status" -eq 0 ]
 }
 
