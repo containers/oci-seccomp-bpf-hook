@@ -23,7 +23,7 @@
 %global provider_prefix %{provider}.%{provider_tld}/%{project}/%{repo}
 %global import_path %{provider_prefix}
 %global git0 https://%{provider}.%{provider_tld}/%{project}/%{repo}
-%global commit0 e200a9ed52b83c4e99da2446a4686865bc51f0df
+%global commit0 a9b7d0b7efd2101c7406d184253b5ba3d7188e83
 %global shortcommit0 %(c=%{commit0}; echo ${c:0:8})
 
 Name: oci-seccomp-bpf-hook
@@ -71,7 +71,7 @@ export BUILDTAGS=""
 BUILDTAGS=$BUILDTAGS make
 
 %install
-%{__make} PREFIX=%{buildroot}%{_prefix} ETCDIR=%{buildroot}%{_sysconfdir} OCI-SECCOMP-BPF_VERSION=%{version} install
+%{__make} DESTDIR=%{buildroot} PREFIX=%{_prefix} ETCDIR=%{buildroot}%{_sysconfdir} OCI-SECCOMP-BPF_VERSION=%{version} install
 
 %check
 %if 0%{?with_check} && 0%{?with_unit_test} && 0%{?with_devel}
@@ -96,8 +96,9 @@ export GOPATH=%{buildroot}/%{gopath}:$(pwd)/vendor:%{gopath}
 %files
 %license LICENSE
 %doc README.md
+%dir %{_libexecdir}/oci/hooks.d
 %{_libexecdir}/oci/hooks.d/%{name}
-%{_datadir}/containers/oci/hooks.d/%{name}-run.json
+%{_datadir}/containers/oci/hooks.d/%{name}.json
 %{_mandir}/man1/%{name}.1*
 
 %changelog
