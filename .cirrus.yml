@@ -67,6 +67,9 @@ validate_task:
 
     timeout_in: 20m
 
+    # TODO: Making this task as not-requred to help speed up development given a new CI system
+    allow_failures: $CI == $CI
+
     env:
         CONTAINER: true
 
@@ -91,6 +94,9 @@ vendor_task:
         dockerfile: contrib/cirrus/Dockerfile
 
     timeout_in: 20m
+
+    # TODO: Making this task as not-requred to help speed up development given a new CI system
+    allow_failures: $CI == $CI
 
     env:
         CONTAINER: true
@@ -120,6 +126,9 @@ docs_task:
         dockerfile: contrib/cirrus/Dockerfile
 
     timeout_in: 20m
+
+    # TODO: Making this task as not-requred to help speed up development given a new CI system
+    allow_failures: $CI == $CI
 
     env:
         CONTAINER: true
@@ -155,6 +164,9 @@ build_task:
 
     timeout_in: 10m
 
+    # TODO: Making this task as not-requred to help speed up development given a new CI system
+    allow_failures: $CI == $CI
+
     # Avoid downloading this stuff every time
     gocache_cache:
         folder: "${GOCACHE}"
@@ -188,6 +200,9 @@ integration_test_task:
             # image_name: $PRIOR_FEDORA_CACHE_IMAGE_NAME
             # image_name: $UBUNTU_CACHE_IMAGE_NAME
             # image_name: $PRIOR_UBUNTU_CACHE_IMAGE_NAME
+
+    # TODO: Making this task as not-requred to help speed up development given a new CI system
+    allow_failures: $CI == $CI
 
     # Avoid downloading this stuff every time
     gocache_cache:
