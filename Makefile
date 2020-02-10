@@ -42,7 +42,7 @@ all: docs binary
 
 .PHONY: docs
 docs:
-	$(MAKE) -C docs
+	$(MAKE) -C docs PREFIX=$(PREFIX)
 
 .PHONY: binary
 binary:
@@ -81,7 +81,7 @@ install.tools: .install.golangci-lint .install.md2man
 
 
 .install.md2man:
-	if [ ! -x "$(GOBIN)/go-md2man" ]; then \
+	if [ -z "$(shell type -P go-md2man)" ]; then \
 		   $(call go-get,github.com/cpuguy83/go-md2man); \
 	fi
 
@@ -92,7 +92,7 @@ install:
 	install ${SELINUXOPT} -m 755 bin/oci-seccomp-bpf-hook ${DESTDIR}$(HOOK_BIN_DIR)
 	install ${SELINUXOPT} -m 644 oci-seccomp-bpf-hook.json ${DESTDIR}$(HOOK_DIR)
 	sed -i 's|HOOK_BIN_DIR|$(HOOK_BIN_DIR)|g' ${DESTDIR}$(HOOK_DIR)/oci-seccomp-bpf-hook.json
-	$(MAKE) -C docs install
+	$(MAKE) -C docs install PREFIX=$(PREFIX)
 
 clean: ## Clean artifacts
 	$(MAKE) -C docs clean
@@ -100,4 +100,3 @@ clean: ## Clean artifacts
 		bin
 	find . -name \*~ -delete
 	find . -name \#\* -delete
-
