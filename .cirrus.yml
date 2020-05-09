@@ -91,28 +91,9 @@ validate_task:
 vendor_task:
 
     container:
-        dockerfile: contrib/cirrus/Dockerfile
-
-    timeout_in: 20m
-
-    # TODO: Making this task as not-requred to help speed up development given a new CI system
-    allow_failures: $CI == $CI
-
-    env:
-        CONTAINER: true
-
-    # Avoid downloading this stuff every time
-    gocache_cache:
-        folder: "${GOCACHE}"
-        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
-
-    # Avoid needless rebuilding of tooling binaries
-    gopath_cache:
-        folder: "${GOPATH}/bin"
-        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
+      image: golang:1.14
 
     script:
-        - $SCRIPT_BASE/setup.sh
         - $SCRIPT_BASE/vendor.sh
 
 
