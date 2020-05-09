@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/containers/oci-seccomp-bpf-hook.svg?branch=master)](https://travis-ci.org/containers/oci-seccomp-bpf-hook)
+[![Build Status](https://api.cirrus-ci.com/github/containers/oci-seccomp-bpf-hook.svg)](https://cirrus-ci.com/github/containers/oci-seccomp-bpf-hook/master)
 
 # oci-seccomp-bpf-hook
 
