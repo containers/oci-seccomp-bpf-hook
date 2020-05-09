@@ -11,11 +11,8 @@ env:
     GOCACHE: "${HOME}/.cache/go-build"
 
     # VM Images are maintained in the libpod repo.
-    _BUILT_IMAGE_SUFFIX: "libpod-5874660151656448"
-    FEDORA_CACHE_IMAGE_NAME: "fedora-31-${_BUILT_IMAGE_SUFFIX}"
-    PRIOR_FEDORA_CACHE_IMAGE_NAME: "fedora-30-${_BUILT_IMAGE_SUFFIX}"
-    UBUNTU_CACHE_IMAGE_NAME: "ubuntu-19-${_BUILT_IMAGE_SUFFIX}"
-    PRIOR_UBUNTU_CACHE_IMAGE_NAME: "ubuntu-18-${_BUILT_IMAGE_SUFFIX}"
+    _BUILT_IMAGE_SUFFIX: "libpod-6224667180531712"  # From the packer output of 'build_vm_images_script'
+    FEDORA_CACHE_IMAGE_NAME: "fedora-32-${_BUILT_IMAGE_SUFFIX}"
 
     # Must be defined true when testing w/in containers
     CONTAINER: "false"
@@ -47,9 +44,6 @@ meta_task:
         # Space-separated list of images used by this repository state
         IMGNAMES: |-
             ${FEDORA_CACHE_IMAGE_NAME}
-            ${PRIOR_FEDORA_CACHE_IMAGE_NAME}
-            ${UBUNTU_CACHE_IMAGE_NAME}
-            ${PRIOR_UBUNTU_CACHE_IMAGE_NAME}
         BUILDID: "${CIRRUS_BUILD_ID}"
         REPOREF: "${CIRRUS_CHANGE_IN_REPO}"
         GCPJSON: ENCRYPTED[ef070c453a5ce68efca096a940835fdca530ed0ec2272ddb52bb02bf7d70dcc3ac9697b85b1d8dcce851931e008f63c0]
@@ -60,93 +54,23 @@ meta_task:
     script: /usr/local/bin/entrypoint.sh
 
 
-validate_task:
-
-    container:
-        dockerfile: contrib/cirrus/Dockerfile
-
-    timeout_in: 20m
-
-    # TODO: Making this task as not-requred to help speed up development given a new CI system
-    allow_failures: $CI == $CI
-
-    env:
-        CONTAINER: true
-
-    # Avoid downloading this stuff every time
-    gocache_cache:
-        folder: "${GOCACHE}"
-        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
-
-    # Avoid needless rebuilding of tooling binaries
-    gopath_cache:
-        folder: "${GOPATH}/bin"
-        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
-
-    script:
-        - $SCRIPT_BASE/setup.sh
-        - $SCRIPT_BASE/validate.sh
-
-
+# make sure that the ./vendor directory is up to date
 vendor_task:
 
     container:
       image: golang:1.14
 
     script:
-        - $SCRIPT_BASE/vendor.sh
+        - make vendor
 
 
-docs_task:
-
-    depends_on:
-        - validate
-        - vendor
-
-    container:
-        dockerfile: contrib/cirrus/Dockerfile
-
-    timeout_in: 20m
-
-    # TODO: Making this task as not-requred to help speed up development given a new CI system
-    allow_failures: $CI == $CI
-
-    env:
-        CONTAINER: true
-
-    # Avoid downloading this stuff every time
-    gocache_cache:
-        folder: "${GOCACHE}"
-        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
-
-    # Avoid needless rebuilding of tooling binaries
-    gopath_cache:
-        folder: "${GOPATH}/bin"
-        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
-
-    # Avoid needless rebuilding of docs
-    gosrc_docs_cache:
-        folder: "${CIRRUS_WORKING_DIR}/docs"
-        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
-
-    script:
-        - $SCRIPT_BASE/setup.sh
-        - make docs
-        - ls -la docs
-
-
+# build binary and docs
 build_task:
 
-    depends_on:
-        - vendor
-        - validate
-
     # Uses VM via default gce_instance (above)
-
-    timeout_in: 10m
-
-    # TODO: Making this task as not-requred to help speed up development given a new CI system
-    allow_failures: $CI == $CI
+    gce_instance:
+        matrix:
+            image_name: $FEDORA_CACHE_IMAGE_NAME
 
     # Avoid downloading this stuff every time
     gocache_cache:
@@ -165,25 +89,18 @@ build_task:
 
     script:
         - $SCRIPT_BASE/setup.sh
-        - $SCRIPT_BASE/build.sh
+        - make binary
+        - make install.tools
+        - make validate
+        - make docs
 
 
-integration_test_task:
-
-    depends_on:
-        - build
-        - docs
+# run unit and integration tests
+test_task:
 
     gce_instance:
         matrix:
             image_name: $FEDORA_CACHE_IMAGE_NAME
-            # FIXME: build requires bcc < v0.11
-            # image_name: $PRIOR_FEDORA_CACHE_IMAGE_NAME
-            # image_name: $UBUNTU_CACHE_IMAGE_NAME
-            # image_name: $PRIOR_UBUNTU_CACHE_IMAGE_NAME
-
-    # TODO: Making this task as not-requred to help speed up development given a new CI system
-    allow_failures: $CI == $CI
 
     # Avoid downloading this stuff every time
     gocache_cache:
@@ -207,7 +124,11 @@ integration_test_task:
 
     script:
         - $SCRIPT_BASE/setup.sh
-        - $SCRIPT_BASE/test.sh
+        - make binary
+        - sudo make install
+        - make test-unit
+        - sh ./hack/enable-bpf.sh || true
+        - sudo make test-integration
 
     binaries_artifacts:
         path: "bin/*"

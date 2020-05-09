@@ -46,11 +46,11 @@ docs:
 
 .PHONY: binary
 binary:
-	$(GO_BUILD) -o bin/oci-seccomp-bpf-hook -ldflags "-X main.version=${VERSION}" $(PROJECT)
+	$(GO_BUILD) -mod=vendor -o bin/oci-seccomp-bpf-hook -ldflags "-X main.version=${VERSION}" $(PROJECT)
 
 .PHONY: validate
 validate:
-	golangci-lint run
+	$(GOBIN)/golangci-lint run
 
 .PHONY: vendor
 vendor:
@@ -77,7 +77,6 @@ install.tools: .install.golangci-lint .install.md2man
 	if [ ! -x "$(GOBIN)/golangci-lint" ]; then \
 		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOBIN)/ v1.18.0; \
 	fi
-
 
 .install.md2man:
 	if [ -z "$(shell type -P go-md2man)" ]; then \

@@ -29,6 +29,7 @@ case "$OS_RELEASE_ID" in
         CRITICAL_PKGS+=(\
             bcc
             bcc-devel
+            bpftool
             conmon
             container-selinux
             containers-common
@@ -89,7 +90,6 @@ case "$OS_RELEASE_ID" in
             protobuf-c
             protobuf-c-devel
             protobuf-devel
-            protobuf-python
             python
             python3-dateutil
             python3-psutil
@@ -103,52 +103,12 @@ case "$OS_RELEASE_ID" in
         )
         # Some small differences between 30 and 31
         case "$OS_RELEASE_VER" in
-            30)
-                INSTALL_PACKAGES+=(\
-                    atomic-registries \
-                    golang-github-cpuguy83-go-md2man \
-                    python2-future \
-                    runc \
-                )
-                ;;
-            31)
+            32)
                 INSTALL_PACKAGES+=(crun)
                 ;;
             *)
                 bad_os_id_ver ;;
         esac
-        ;;
-    ubuntu)
-        if [[ "$CONTAINER" == "true" ]]; then
-            echo "Ubuntu containers are not supported"
-            bad_os_id_ver
-        fi
-
-        export DEBIAN_FRONTEND="noninteractive"
-        INSTALL_COMMAND="apt-get -qq --yes install"
-        LIST_COMMAND='dpkg-query --show --showformat=${Package}-${Version}-${Architecture}\n'
-        CRITICAL_PKGS=(\
-            bcc \
-            containers-common \
-            cri-o-runc \
-            golang \
-            libbpfcc \
-            libbpfcc-dev \
-            podman \
-            libseccomp-dev \
-        )
-        # N/B: Travis also installs bcc-tools package, but this is not in the distro
-        INSTALL_PACKAGES=(\
-            "${CRITICAL_PKGS[@]}" \
-            linux-headers-$(uname -r) \
-        )
-        # N/B: This provides different versions of bcc libraries and tools!
-        # travis does:
-        # apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 91B31D79C30E5EE6
-        # apt-add-repository https://repo.iovisor.org/apt/$(lsb_release -cs)
-        apt-get -qq --yes update
-        echo "Upgrading all packages"
-        apt-get -qq --yes upgrade
         ;;
     *)
         bad_os_id_ver
