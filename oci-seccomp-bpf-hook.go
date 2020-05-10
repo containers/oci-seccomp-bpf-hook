@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	// BPFTimout is the timeout in seconds to wait for the child process to signal
+	// BPFTimeout is the timeout in seconds to wait for the child process to signal
 	// that the eBPF program finished compiling and attached to the tracee.
 	BPFTimeout = 10
 	// InputPrefix is the prefix for input files in the runtime annotation.
@@ -215,46 +215,52 @@ func runBPFSource(pid int, profilePath string, inputFile string) error {
 
 	// Initialize the wait group used to wait for the tracing to be finished.
 	wg.Add(1)
-	recordSyscalls := false
 	go func() {
+		defer wg.Done()
+		recordSyscalls := false
 		var e event
-		for {
-			data := <-channel
-			err := binary.Read(bytes.NewBuffer(data), binary.LittleEndian, &e)
-			if err != nil {
-				logrus.Errorf("failed to decode received data '%s': %s\n", data, err)
-				continue
+		for data := range channel {
+			if err := binary.Read(bytes.NewBuffer(data), binary.LittleEndian, &e); err != nil {
+				// Return in case of an error. Otherwise, we
+				// could miss stop event and run into an
+				// infinite loop.
+				logrus.Errorf("failed to decode received data %q: %s\n", data, err)
+				return
 			}
+
+			// The BPF program is done tracing, so we can stop
+			// reading from the perf buffer.
 			if e.StopTracing {
-				break
-			} else {
-				name, err := syscallIDtoName(e.ID)
-				if err != nil {
-					logrus.Errorf("error getting the name for syscall ID %d", e.ID)
-				}
-				// Syscalls are not recorded until prctl() is called. The first
-				// invocation of prctl is guaranteed to happen by the supported
-				// OCI runtimes (i.e., runc and crun) as it's being called when
-				// setting the seccomp profile.
-				if name == "prctl" {
-					recordSyscalls = true
-				}
-				if recordSyscalls {
-					syscalls[name]++
-				}
+				return
+			}
+
+			name, err := syscallIDtoName(e.ID)
+			if err != nil {
+				logrus.Errorf("error getting the name for syscall ID %d", e.ID)
+			}
+			// Syscalls are not recorded until prctl() is called. The first
+			// invocation of prctl is guaranteed to happen by the supported
+			// OCI runtimes (i.e., runc and crun) as it's being called when
+			// setting the seccomp profile.
+			if name == "prctl" {
+				recordSyscalls = true
+			}
+			if recordSyscalls {
+				syscalls[name]++
 			}
 		}
-		wg.Done()
 	}()
-	perfMap.Start()
 	logrus.Info("PerfMap Start")
+	perfMap.Start()
 
 	// Waiting for the goroutine which is reading the perf buffer to be done
 	// The goroutine will exit when the container exits
 	wg.Wait()
 
-	perfMap.Stop()
 	logrus.Info("PerfMap Stop")
+	perfMap.Stop()
+
+	logrus.Infof("Writing seccomp profile to %q", profilePath)
 	if err := generateProfile(syscalls, profilePath, inputFile); err != nil {
 		return errors.Wrap(err, "error generating final seccomp profile")
 	}
