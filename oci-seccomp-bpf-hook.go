@@ -206,7 +206,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) error {
 
 	table := bcc.NewTable(m.TableId("events"), m)
 	channel := make(chan []byte)
-	perfMap, err := bcc.InitPerfMap(table, channel)
+	perfMap, err := bcc.InitPerfMap(table, channel, nil)
 	if err != nil {
 		return errors.Wrap(err, "error initializing perf map")
 	}
