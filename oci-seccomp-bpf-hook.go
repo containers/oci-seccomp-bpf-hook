@@ -52,11 +52,11 @@ func main() {
 	}
 	logrus.Infof("Started OCI seccomp hook version %s", version)
 
-	runBPF := flag.Int("r", 0, "-r [PID] run the BPF function and attach to the pid")
-	outputFile := flag.String("o", "", "path of the file to save the seccomp profile")
-	inputFile := flag.String("i", "", "path of the input file")
-	start := flag.Bool("s", false, "Start the hook which would execute a process to trace syscalls made by the container")
-	printVersion := flag.Bool("version", false, "Print the hook's version")
+	runBPF := flag.Int("r", 0, "Trace the specified PID")
+	outputFile := flag.String("o", "", "Path of the output file")
+	inputFile := flag.String("i", "", "Path of the input file")
+	start := flag.Bool("s", false, "Start tracing and read the state spec from stdin")
+	printVersion := flag.Bool("version", false, "Print the version")
 	flag.Parse()
 
 	if *printVersion {
