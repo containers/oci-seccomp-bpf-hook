@@ -55,8 +55,6 @@ func main() {
 		logrus.AddHook(hook)
 	}
 
-	logrus.Infof("Started OCI seccomp hook version %s", version)
-
 	runBPF := flag.Int("r", 0, "Trace the specified PID")
 	outputFile := flag.String("o", "", "Path of the output file")
 	inputFile := flag.String("i", "", "Path of the input file")
@@ -85,6 +83,7 @@ func main() {
 			logrus.Fatal(err)
 		}
 	case *start:
+		logrus.Infof("Started OCI seccomp hook version %s", version)
 		if err := detachAndTrace(); err != nil {
 			logrus.Fatal(err)
 		}
@@ -137,7 +136,7 @@ func detachAndTrace() error {
 	}
 
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGUSR1)
+	signal.Notify(sig, syscall.SIGUSR1, syscall.SIGUSR2)
 
 	executable, err := os.Executable()
 	if err != nil {
@@ -148,44 +147,69 @@ func detachAndTrace() error {
 	if err != nil {
 		return errors.Wrap(err, "cannot re-execute")
 	}
+	defer func() {
+		if err := process.Release(); err != nil {
+			logrus.Errorf("Error releasing process: %v", err)
+		}
+	}()
 
 	select {
-	case <-sig:
-		// Nothing to do, we can safely detach now.
-		break
+	// Check which signal we received and act accordingly.
+	case s := <-sig:
+		logrus.Infof("Received signal (presumably from child): %v", s)
+		switch s {
+		case syscall.SIGUSR1:
+			// Child started tracing. We can safely detach.
+			break
+		case syscall.SIGUSR2:
+			return errors.New("tracer signaled an error, please refer to the syslog (e.g., via journalctl(1)) for errors")
+		default:
+			return errors.Errorf("unexpected signal %v", s)
+		}
+
+	// The timeout kicked in. Kill the child and return the sad news.
 	case <-time.After(BPFTimeout * time.Second):
-		// For whatever reason, the child process did not send the signal
-		// within the timeout.  So kill it and return an error.
 		if err := process.Kill(); err != nil {
 			logrus.Errorf("error killing child process: %v", err)
 		}
 		return errors.Errorf("BPF program didn't compile and attach within %d seconds", BPFTimeout)
 	}
 
-	return process.Release()
+	return nil
 }
 
 // run the BPF source and attach it to raw_syscalls:sys_enter tracepoint
-func runBPFSource(pid int, profilePath string, inputFile string) error {
+func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error) {
 	var wg sync.WaitGroup
 
 	ppid := os.Getppid()
 	parentProcess, err := os.FindProcess(ppid)
-
 	if err != nil {
 		return errors.Wrapf(err, "cannot find parent process %d", ppid)
 	}
-
 	logrus.Infof("Running floating process PID to attach: %d", pid)
+
+	signaledParent := false
+	defer func() {
+		if !signaledParent && finalErr != nil {
+			logrus.Infof("Sending SIGUSR2 to parent (%d)", ppid)
+			if err := parentProcess.Signal(syscall.SIGUSR2); err != nil {
+				logrus.Errorf("error sending signal to parent process: %v", err)
+			}
+		}
+	}()
+
 	syscalls := make(map[string]int, 303)
 	src := strings.Replace(source, "$PARENT_PID", strconv.Itoa(pid), -1)
 	m := bcc.NewModule(src, []string{})
 	defer m.Close()
 
+	logrus.Info("Loading enter tracepoint")
 	enterTrace, err := m.LoadTracepoint("enter_trace")
 	if err != nil {
 		return errors.Wrap(err, "error loading tracepoint")
 	}
+	logrus.Info("Loading exit tracepoint")
 	checkExit, err := m.LoadTracepoint("check_exit")
 	if err != nil {
 		return errors.Wrap(err, "error loading tracepoint")
@@ -199,12 +223,12 @@ func runBPFSource(pid int, profilePath string, inputFile string) error {
 		return errors.Wrap(err, "error attaching to tracepoint")
 	}
 
-	// Send a signal to the parent process to indicate the compilation has been
-	// completed.
-	err = parentProcess.Signal(syscall.SIGUSR1)
-	if err != nil {
+	// Send a signal to the parent process to indicate the compilation has
+	// been completed.
+	if err := parentProcess.Signal(syscall.SIGUSR1); err != nil {
 		return err
 	}
+	signaledParent = true
 
 	table := bcc.NewTable(m.TableId("events"), m)
 	channel := make(chan []byte)
