@@ -36,6 +36,9 @@ const (
 	InputPrefix = "if:"
 	// OutputPrefix is the prefix for output files in the runtime annotation.
 	OutputPrefix = "of:"
+	// HookAnnotation is the runtime-spec annotation used to start and run
+	// the hook by passing arguments.
+	HookAnnotation = "io.containers.trace-syscall"
 )
 
 var (
@@ -99,7 +102,7 @@ func detachAndTrace() error {
 	}
 	pid := s.Pid
 
-	annotation := s.Annotations["io.containers.trace-syscall"]
+	annotation := s.Annotations[HookAnnotation]
 
 	outputFile, inputFile, err := parseAnnotation(annotation)
 	if err != nil {
