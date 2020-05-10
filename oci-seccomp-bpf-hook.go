@@ -355,8 +355,7 @@ func parseAnnotation(annotation string) (outputFile string, inputFile string, er
 
 // syscallIDtoName returns the syscall name for the specified ID.
 func syscallIDtoName(id uint32) (string, error) {
-	name, err := seccomp.ScmpSyscall(id).GetName()
-	return name, err
+	return seccomp.ScmpSyscall(id).GetName()
 }
 
 // syscallInProfile checks if the input profile contains the syscall..
