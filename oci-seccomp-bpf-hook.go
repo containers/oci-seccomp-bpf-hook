@@ -135,7 +135,6 @@ func detachAndTrace() error {
 		},
 	}
 
-
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGUSR1)
 
@@ -162,22 +161,7 @@ func detachAndTrace() error {
 		return errors.Errorf("BPF program didn't compile and attach within %d seconds", BPFTimeout)
 	}
 
-	processPID := process.Pid
-	f, err := os.Create("pidfile")
-	if err != nil {
-		return errors.Wrap(err, "cannot write pid to file err")
-	}
-	defer f.Close()
-	_, err = f.WriteString(strconv.Itoa(processPID))
-	if err != nil {
-		return errors.Errorf("cannot write pid to the file")
-	}
-	err = process.Release()
-	if err != nil {
-		return errors.Wrap(err, "cannot detach process err")
-	}
-
-	return nil
+	return process.Release()
 }
 
 // run the BPF source and attach it to raw_syscalls:sys_enter tracepoint
