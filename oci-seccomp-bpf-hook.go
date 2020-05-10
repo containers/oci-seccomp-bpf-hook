@@ -282,7 +282,7 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 	var names []string
 	for syscallName, syscallID := range syscalls {
 		if syscallID > 0 {
-			if !profileContainsSyscall(&inputProfile, syscallName) {
+			if !syscallInProfile(&inputProfile, syscallName) {
 				names = append(names, syscallName)
 			}
 		}
@@ -359,8 +359,8 @@ func syscallIDtoName(id uint32) (string, error) {
 	return name, err
 }
 
-// profileContainsSyscall checks if the input profile contains the syscall..
-func profileContainsSyscall(profile *types.Seccomp, syscall string) bool {
+// syscallInProfile checks if the input profile contains the syscall..
+func syscallInProfile(profile *types.Seccomp, syscall string) bool {
 	for _, s := range profile.Syscalls {
 		if s.Name == syscall {
 			return true
