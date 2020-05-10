@@ -29,13 +29,13 @@ import (
 )
 
 const (
-	// ebpfTimout is the timeout in seconds to wait for the child process to signal
+	// BPFTimout is the timeout in seconds to wait for the child process to signal
 	// that the eBPF program finished compiling and attached to the tracee.
-	ebpfTimeout = 10
-	// inputPrefix is the prefix for input files in the runtime annotation.
-	inputPrefix = "if:"
-	// outputPrefix is the prefix for output files in the runtime annotation.
-	outputPrefix = "of:"
+	BPFTimeout = 10
+	// InputPrefix is the prefix for input files in the runtime annotation.
+	InputPrefix = "if:"
+	// OutputPrefix is the prefix for output files in the runtime annotation.
+	OutputPrefix = "of:"
 )
 
 var (
@@ -133,13 +133,13 @@ func detachAndTrace() error {
 		case <-sig:
 			// Nothing to do, we can safely detach now.
 			break
-		case <-time.After(ebpfTimeout * time.Second):
+		case <-time.After(BPFTimeout * time.Second):
 			// For whatever reason, the child process did not send the signal
 			// within the timeout.  So kill it and return an error to runc.
 			if err := process.Kill(); err != nil {
 				logrus.Errorf("error killing child process: %v", err)
 			}
-			return errors.Errorf("eBPF program didn't compile and attach within %d seconds", ebpfTimeout)
+			return errors.Errorf("eBPF program didn't compile and attach within %d seconds", BPFTimeout)
 		}
 
 		processPID := process.Pid
@@ -316,7 +316,7 @@ func parseAnnotation(annotation string) (outputFile string, inputFile string, er
 		switch {
 		// Input profile
 		case strings.HasPrefix(path, "if:"):
-			inputFile = strings.TrimSpace(strings.TrimPrefix(path, inputPrefix))
+			inputFile = strings.TrimSpace(strings.TrimPrefix(path, InputPrefix))
 			if !filepath.IsAbs(inputFile) {
 				return "", "", errors.Wrapf(errInvalidAnnotation, "paths must be absolute: %q", inputFile)
 			}
@@ -332,14 +332,14 @@ func parseAnnotation(annotation string) (outputFile string, inputFile string, er
 
 		// Output profile
 		case strings.HasPrefix(path, "of:"):
-			outputFile = strings.TrimSpace(strings.TrimPrefix(path, outputPrefix))
+			outputFile = strings.TrimSpace(strings.TrimPrefix(path, OutputPrefix))
 			if !filepath.IsAbs(outputFile) {
 				return "", "", errors.Wrapf(errInvalidAnnotation, "paths must be absolute: %q", inputFile)
 			}
 
 		// Unsupported default
 		default:
-			return "", "", errors.Wrapf(errInvalidAnnotation, "must start %q or %q prefix", inputPrefix, outputPrefix)
+			return "", "", errors.Wrapf(errInvalidAnnotation, "must start %q or %q prefix", InputPrefix, OutputPrefix)
 		}
 	}
 
