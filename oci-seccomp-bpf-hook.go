@@ -75,20 +75,21 @@ func main() {
 	}
 
 	// Execute commands.
+	var err error
 	switch {
 	case *printVersion:
 		fmt.Println(version)
 	case *runBPF > 0:
-		if err := runBPFSource(*runBPF, *outputFile, *inputFile); err != nil {
-			logrus.Fatal(err)
-		}
+		err = runBPFSource(*runBPF, *outputFile, *inputFile)
 	case *start:
 		logrus.Infof("Started OCI seccomp hook version %s", version)
-		if err := detachAndTrace(); err != nil {
-			logrus.Fatal(err)
-		}
+		err = detachAndTrace()
 	default:
 		logrus.Fatalf("Unsupported arguments: %v", os.Args)
+	}
+
+	if err != nil {
+		logrus.Fatalf("%v: please refer to the syslog (e.g., journalctl(1)) for more details", err)
 	}
 }
 
@@ -103,7 +104,7 @@ func detachAndTrace() error {
 		return err
 	}
 
-	// Sanity check the PID .
+	// Sanity check the PID.
 	if s.Pid <= 0 {
 		return errors.Errorf("invalid PID %d (must be greater than 0)", s.Pid)
 	}
@@ -162,7 +163,7 @@ func detachAndTrace() error {
 			// Child started tracing. We can safely detach.
 			break
 		case syscall.SIGUSR2:
-			return errors.New("tracer signaled an error, please refer to the syslog (e.g., via journalctl(1)) for errors")
+			return errors.New("error while tracing")
 		default:
 			return errors.Errorf("unexpected signal %v", s)
 		}
@@ -280,6 +281,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	// Waiting for the goroutine which is reading the perf buffer to be done
 	// The goroutine will exit when the container exits
 	wg.Wait()
+	logrus.Info("BPF progam has finished")
 
 	logrus.Info("PerfMap Stop")
 	perfMap.Stop()
