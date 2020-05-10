@@ -49,10 +49,12 @@ var (
 )
 
 func main() {
-	hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
-	if err == nil {
+	// To facilitate debugging of the hook, write all logs to the syslog,
+	// so we can inspect its output via `journalctl`.
+	if hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, ""); err == nil {
 		logrus.AddHook(hook)
 	}
+
 	logrus.Infof("Started OCI seccomp hook version %s", version)
 
 	runBPF := flag.Int("r", 0, "Trace the specified PID")
@@ -93,22 +95,36 @@ func main() {
 // detachAndTrace re-executes the current executable to "fork" in go-ish way and
 // traces the provided PID.
 func detachAndTrace() error {
+	// Read the State spec from stdin and unmarshal it.
 	var s spec.State
 	reader := bufio.NewReader(os.Stdin)
 	decoder := json.NewDecoder(reader)
-	err := decoder.Decode(&s)
-	if err != nil {
+	if err := decoder.Decode(&s); err != nil {
 		return err
 	}
-	pid := s.Pid
 
+	// Sanity check the PID .
+	if s.Pid <= 0 {
+		return errors.Errorf("invalid PID %d (must be greater than 0)", s.Pid)
+	}
+
+	// Parse the State's annotation.
 	annotation := s.Annotations[HookAnnotation]
-
 	outputFile, inputFile, err := parseAnnotation(annotation)
 	if err != nil {
 		return err
 	}
 
+	// We are running as a hook and are hence blocking the container
+	// (engine) from running. Go doesn't allow for forking, so we are using
+	// a common trick in go land and execute ourselves and exit.  This way,
+	// we're passing the arguments (i.e., the PID) to the child process
+	// which can start tracing.
+	//
+	// We're waiting at most for `BPFTimeout` seconds for a SIGUSR1 from
+	// the child to signal they compiled and started the BPF program
+	// successfully. Otherwise, we're shooting down the child process and
+	// return an error.
 	attr := &os.ProcAttr{
 		Dir: ".",
 		Env: os.Environ(),
@@ -118,51 +134,49 @@ func detachAndTrace() error {
 			nil,
 		},
 	}
-	if pid > 0 {
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGUSR1)
 
-		executable, err := os.Executable()
-		if err != nil {
-			return errors.Wrap(err, "cannot determine executable")
-		}
 
-		process, err := os.StartProcess(executable, []string{"oci-seccomp-bpf-hook", "-r", strconv.Itoa(pid), "-o", outputFile, "-i", inputFile}, attr)
-		if err != nil {
-			return errors.Wrap(err, "cannot re-execute")
-		}
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGUSR1)
 
-		select {
-		case <-sig:
-			// Nothing to do, we can safely detach now.
-			break
-		case <-time.After(BPFTimeout * time.Second):
-			// For whatever reason, the child process did not send the signal
-			// within the timeout.  So kill it and return an error to runc.
-			if err := process.Kill(); err != nil {
-				logrus.Errorf("error killing child process: %v", err)
-			}
-			return errors.Errorf("eBPF program didn't compile and attach within %d seconds", BPFTimeout)
-		}
-
-		processPID := process.Pid
-		f, err := os.Create("pidfile")
-		if err != nil {
-			return errors.Wrap(err, "cannot write pid to file err")
-		}
-		defer f.Close()
-		_, err = f.WriteString(strconv.Itoa(processPID))
-		if err != nil {
-			return errors.Errorf("cannot write pid to the file")
-		}
-		err = process.Release()
-		if err != nil {
-			return errors.Wrap(err, "cannot detach process err")
-		}
-
-	} else {
-		return errors.Errorf("container not running")
+	executable, err := os.Executable()
+	if err != nil {
+		return errors.Wrap(err, "cannot determine executable")
 	}
+
+	process, err := os.StartProcess(executable, []string{"oci-seccomp-bpf-hook", "-r", strconv.Itoa(s.Pid), "-o", outputFile, "-i", inputFile}, attr)
+	if err != nil {
+		return errors.Wrap(err, "cannot re-execute")
+	}
+
+	select {
+	case <-sig:
+		// Nothing to do, we can safely detach now.
+		break
+	case <-time.After(BPFTimeout * time.Second):
+		// For whatever reason, the child process did not send the signal
+		// within the timeout.  So kill it and return an error.
+		if err := process.Kill(); err != nil {
+			logrus.Errorf("error killing child process: %v", err)
+		}
+		return errors.Errorf("BPF program didn't compile and attach within %d seconds", BPFTimeout)
+	}
+
+	processPID := process.Pid
+	f, err := os.Create("pidfile")
+	if err != nil {
+		return errors.Wrap(err, "cannot write pid to file err")
+	}
+	defer f.Close()
+	_, err = f.WriteString(strconv.Itoa(processPID))
+	if err != nil {
+		return errors.Errorf("cannot write pid to the file")
+	}
+	err = process.Release()
+	if err != nil {
+		return errors.Wrap(err, "cannot detach process err")
+	}
+
 	return nil
 }
 
