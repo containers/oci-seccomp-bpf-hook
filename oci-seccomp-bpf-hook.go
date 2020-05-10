@@ -64,31 +64,32 @@ func main() {
 	printVersion := flag.Bool("version", false, "Print the version")
 	flag.Parse()
 
-	if *printVersion {
-		fmt.Println(version)
-		os.Exit(0)
-	}
-
+	// Validate input.
 	if *outputFile != "" {
 		if !filepath.IsAbs(*outputFile) {
-			logrus.Fatal("output filepath is not absolute")
+			logrus.Fatal("Output filepath is not absolute")
 		}
 	}
-
 	if *inputFile != "" {
 		if !filepath.IsAbs(*inputFile) {
-			logrus.Fatal("input filepath is not absolute")
+			logrus.Fatal("Input filepath is not absolute")
 		}
 	}
 
-	if *runBPF > 0 {
+	// Execute commands.
+	switch {
+	case *printVersion:
+		fmt.Println(version)
+	case *runBPF > 0:
 		if err := runBPFSource(*runBPF, *outputFile, *inputFile); err != nil {
 			logrus.Fatal(err)
 		}
-	} else if *start {
+	case *start:
 		if err := detachAndTrace(); err != nil {
 			logrus.Fatal(err)
 		}
+	default:
+		logrus.Fatalf("Unsupported arguments: %v", os.Args)
 	}
 }
 
