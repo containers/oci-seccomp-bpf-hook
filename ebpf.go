@@ -25,6 +25,15 @@ const source string = `
 #include <linux/sched.h>
 #include <linux/tracepoint.h>
 
+/*
+ * mnt_namespace is defined in fs/mount.h and not part of the kernel headers.
+ * Hence, we need a forward decl here to make the compiler eat the code.
+ */
+struct mnt_namespace {
+    atomic_t count;
+    struct ns_common ns;
+};
+
 // BPF_HASH used to store the PID namespace of the parent PID
 // of the processes inside the container.
 BPF_HASH(parent_namespace, u64, unsigned int);
@@ -56,15 +65,19 @@ int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
     struct syscall_data data = {};
     u64 key = 0;
     unsigned int zero = 0;
-    struct task_struct* task;
+    struct task_struct *task;
+    struct nsproxy *nsproxy;
+    struct mnt_namespace *mnt_ns;
 
     data.pid = bpf_get_current_pid_tgid();
     data.id = (int)args->id;
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
 
-    task = (struct task_struct*)bpf_get_current_task();
-    struct nsproxy* ns = task->nsproxy;
-    unsigned int inum = ns->pid_ns_for_children->ns.inum;
+    task = (struct task_struct *)bpf_get_current_task();
+    nsproxy = task->nsproxy;
+    mnt_ns = nsproxy->mnt_ns;
+
+    unsigned int inum = mnt_ns->ns.inum;
 
     if (data.pid == $PARENT_PID) {
         parent_namespace.update(&key, &inum);
