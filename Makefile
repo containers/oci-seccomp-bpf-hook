@@ -83,14 +83,24 @@ install.tools: .install.golangci-lint .install.md2man
 		   $(call go-get,github.com/cpuguy83/go-md2man); \
 	fi
 
-.PHONY: install
-install:
+.PHONY: install.docs-nobuild
+install.docs-nobuild:
+	$(MAKE) -C docs install-nobuild
+
+.PHONY: install.docs
+install.docs:
+	$(MAKE) -C docs install
+
+.PHONY: install-nobuild
+install-nobuild: install.docs-nobuild
 	install ${SELINUXOPT} -d -m 755 ${DESTDIR}$(HOOK_BIN_DIR)
 	install ${SELINUXOPT} -d -m 755 ${DESTDIR}$(HOOK_DIR)
 	install ${SELINUXOPT} -m 755 bin/oci-seccomp-bpf-hook ${DESTDIR}$(HOOK_BIN_DIR)
 	install ${SELINUXOPT} -m 644 oci-seccomp-bpf-hook.json ${DESTDIR}$(HOOK_DIR)
 	sed -i 's|HOOK_BIN_DIR|$(HOOK_BIN_DIR)|g' ${DESTDIR}$(HOOK_DIR)/oci-seccomp-bpf-hook.json
-	$(MAKE) -C docs install PREFIX=$(PREFIX)
+
+.PHONY: install
+install: docs install-nobuild
 
 clean: ## Clean artifacts
 	$(MAKE) -C docs clean
