@@ -1,3 +1,4 @@
+DESTDIR ?=
 PREFIX ?= /usr/local
 DATADIR ?= $(PREFIX)/share
 MANDIR ?= $(DATADIR)/man
@@ -10,8 +11,8 @@ docs: $(patsubst %.md,%.1,$(wildcard *.md))
 
 .PHONY: install-nobuild
 install-nobuild:
-	install -d ${MANDIR}/man1
-	install -m 0644 oci-seccomp-bpf-hook*.1 ${MANDIR}/man1
+	install -d $(DESTDIR)$(MANDIR)/man1
+	install -m 0644 oci-seccomp-bpf-hook*.1 $(DESTDIR)$(MANDIR)/man1
 
 .PHONY: install
 install: docs install-nobuild
