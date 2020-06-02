@@ -13,7 +13,7 @@ PROJECT := github.com/containers/oci-seccomp-bpf-hook
 HOOK_BIN_DIR ?= $(PREFIX)/libexec/oci/hooks.d
 ETCDIR ?= /etc
 HOOK_DIR ?= $(PREFIX)/share/containers/oci/hooks.d/
-VERSION ?= $(shell cat ./VERSION)
+OSBH_VERSION ?= $(shell cat ./VERSION)
 
 # Can be used for local testing (e.g., to set filters)
 BATS_OPTS ?=
@@ -46,7 +46,7 @@ docs:
 
 .PHONY: binary
 binary:
-	$(GO_BUILD) -mod=vendor -o bin/oci-seccomp-bpf-hook -ldflags "-X main.version=$(VERSION)" $(PROJECT)
+	$(GO_BUILD) -mod=vendor -o bin/oci-seccomp-bpf-hook -ldflags "-X main.version=$(OSBH_VERSION)" $(PROJECT)
 
 .PHONY: validate
 validate:
