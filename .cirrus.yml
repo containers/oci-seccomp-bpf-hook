@@ -127,7 +127,6 @@ test_task:
         - make binary
         - sudo make PREFIX=/usr install
         - make test-unit
-        - sh ./hack/enable-bpf.sh || true
         - sudo make test-integration
 
     binaries_artifacts:

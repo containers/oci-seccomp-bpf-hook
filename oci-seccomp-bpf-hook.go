@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log/syslog"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"sort"
@@ -93,9 +94,25 @@ func main() {
 	}
 }
 
+// modprobe the specified module.
+func modprobe(module string) error {
+	bin, err := exec.LookPath("modprobe")
+	if err != nil {
+		// Fallback to `/usr/sbin/modprobe`.  The environment may be
+		// empty.  If that doesn't exist either, we'll fail below.
+		bin = "/usr/sbin/modprobe"
+	}
+	return exec.Command(bin, module).Run()
+}
+
 // detachAndTrace re-executes the current executable to "fork" in go-ish way and
 // traces the provided PID.
 func detachAndTrace() error {
+	logrus.Info("Loading kheaders module")
+	if err := modprobe("kheaders"); err != nil {
+		return errors.Wrap(err, "error loading kheaders module")
+	}
+
 	// Read the State spec from stdin and unmarshal it.
 	var s spec.State
 	reader := bufio.NewReader(os.Stdin)
