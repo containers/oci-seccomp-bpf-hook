@@ -369,7 +369,7 @@ func parseAnnotation(annotation string) (outputFile string, inputFile string, er
 		case strings.HasPrefix(path, "if:"):
 			inputFile = strings.TrimSpace(strings.TrimPrefix(path, InputPrefix))
 			if !filepath.IsAbs(inputFile) {
-				return "", "", errors.Wrapf(errInvalidAnnotation, "paths must be absolute: %q", inputFile)
+				return "", "", errors.Wrapf(errInvalidAnnotation, "Input file path must be absolute: %q", inputFile)
 			}
 			inputProfile := types.Seccomp{}
 			input, err := ioutil.ReadFile(inputFile)
@@ -385,7 +385,7 @@ func parseAnnotation(annotation string) (outputFile string, inputFile string, er
 		case strings.HasPrefix(path, "of:"):
 			outputFile = strings.TrimSpace(strings.TrimPrefix(path, OutputPrefix))
 			if !filepath.IsAbs(outputFile) {
-				return "", "", errors.Wrapf(errInvalidAnnotation, "paths must be absolute: %q", inputFile)
+				return "", "", errors.Wrapf(errInvalidAnnotation, "Output file path must be absolute: %q", outputFile)
 			}
 
 		// Unsupported default
