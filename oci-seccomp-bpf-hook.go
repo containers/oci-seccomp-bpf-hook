@@ -301,7 +301,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	logrus.Info("BPF progam has finished")
 
 	logrus.Info("PerfMap Stop")
-	perfMap.Stop()
+	go perfMap.Stop()
 
 	logrus.Infof("Writing seccomp profile to %q", profilePath)
 	if err := generateProfile(syscalls, profilePath, inputFile); err != nil {
