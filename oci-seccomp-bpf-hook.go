@@ -108,9 +108,9 @@ func modprobe(module string) error {
 // detachAndTrace re-executes the current executable to "fork" in go-ish way and
 // traces the provided PID.
 func detachAndTrace() error {
-	logrus.Info("Loading kheaders module")
+	logrus.Info("Trying to load `kheaders` module")
 	if err := modprobe("kheaders"); err != nil {
-		return errors.Wrap(err, "error loading kheaders module")
+		logrus.Infof("Loading `kheaders` failed, continuing in hope kernel headers reside on disk: %v", err)
 	}
 
 	// Read the State spec from stdin and unmarshal it.
