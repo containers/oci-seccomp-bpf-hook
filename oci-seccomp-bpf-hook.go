@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -340,6 +341,10 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 	outputProfile = inputProfile
 	outputProfile.DefaultAction = types.ActErrno
 
+	if err := appendArchIfNotAlreadyIncluded(runtime.GOARCH, &outputProfile); err != nil {
+		return errors.Wrap(err, "appending architecture to ouput profile")
+	}
+
 	outputProfile.Syscalls = append(outputProfile.Syscalls, &types.Syscall{
 		Action: types.ActAllow,
 		Names:  names,
@@ -419,4 +424,58 @@ func syscallInProfile(profile *types.Seccomp, syscall string) bool {
 		}
 	}
 	return false
+}
+
+func appendArchIfNotAlreadyIncluded(goArch string, profile *types.Seccomp) error {
+	targetArch, err := goArchToSeccompArch(goArch)
+	if err != nil {
+		return errors.Wrap(err, "determine target architecture")
+	}
+	for _, arch := range profile.Architectures {
+		if arch == targetArch {
+			// architecture already part of the profile
+			return nil
+		}
+	}
+	profile.Architectures = append(profile.Architectures, targetArch)
+	return nil
+}
+
+func goArchToSeccompArch(goArch string) (types.Arch, error) {
+	switch goArch {
+	case "386":
+		return types.ArchX32, nil
+	case "amd64":
+		return types.ArchX86_64, nil
+	case "amd64p32":
+		return types.ArchX86, nil
+	case "arm":
+		return types.ArchARM, nil
+	case "arm64":
+		return types.ArchAARCH64, nil
+	case "ppc":
+		return types.ArchPPC, nil
+	case "ppc64":
+		return types.ArchPPC64, nil
+	case "ppc64le":
+		return types.ArchPPC64LE, nil
+	case "mips":
+		return types.ArchMIPS, nil
+	case "mipsle":
+		return types.ArchMIPSEL, nil
+	case "mips64":
+		return types.ArchMIPS64, nil
+	case "mips64le":
+		return types.ArchMIPSEL64, nil
+	case "mips64p32":
+		return types.ArchMIPS64N32, nil
+	case "mips64p32le":
+		return types.ArchMIPSEL64N32, nil
+	case "s390":
+		return types.ArchS390, nil
+	case "s390x":
+		return types.ArchS390X, nil
+	}
+
+	return "", errors.Errorf("unsupported go arch provided: %s", goArch)
 }
