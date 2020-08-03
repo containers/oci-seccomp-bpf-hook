@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	types "github.com/seccomp/containers-golang"
 	"github.com/stretchr/testify/assert"
 )
 
