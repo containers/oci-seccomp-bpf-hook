@@ -227,7 +227,7 @@ func (bpf *Module) load(name string, progType int, logLevel, logSize uint) (int,
 		logBuf = make([]byte, logSize)
 		logBufP = (*C.char)(unsafe.Pointer(&logBuf[0]))
 	}
-	fd, err := C.bcc_prog_load(uint32(progType), nameCS, start, size, license, version, C.int(logLevel), logBufP, C.uint(len(logBuf)))
+	fd, err := C.bcc_func_load(bpf.p, C.int(uint32(progType)), nameCS, start, size, license, version, C.int(logLevel), logBufP, C.uint(len(logBuf)), nil)
 	if fd < 0 {
 		return -1, fmt.Errorf("error loading BPF program: %v", err)
 	}
@@ -523,16 +523,16 @@ func GetSyscallFnName(name string) string {
 	return GetSyscallPrefix() + name
 }
 
+var syscallPrefix string
+
 func GetSyscallPrefix() string {
-	_, err := bccResolveName("", "sys_bpf", -1)
-	if err == nil {
-		return "sys_"
+	if syscallPrefix == "" {
+		_, err := bccResolveName("", "__x64_sys_bpf", -1)
+		if err == nil {
+			syscallPrefix = "__x64_sys_"
+		} else {
+			syscallPrefix = "sys_"
+		}
 	}
-
-	_, err = bccResolveName("", "__x64_sys_bpf", -1)
-	if err == nil {
-		return "__x64_sys_"
-	}
-
-	return "sys_"
+	return syscallPrefix
 }
