@@ -71,7 +71,7 @@ export BUILDTAGS=""
 BUILDTAGS=$BUILDTAGS make
 
 %install
-%{__make} DESTDIR=%{buildroot} PREFIX=%{_prefix} ETCDIR=%{buildroot}%{_sysconfdir} OCI-SECCOMP-BPF_VERSION=%{version} install
+%{__make} DESTDIR=%{buildroot} PREFIX=%{_prefix} ETCDIR=%{buildroot}%{_sysconfdir} install
 
 %check
 %if 0%{?with_check} && 0%{?with_unit_test} && 0%{?with_devel}
@@ -102,6 +102,9 @@ export GOPATH=%{buildroot}/%{gopath}:$(pwd)/vendor:%{gopath}
 %{_mandir}/man1/%{name}.1*
 
 %changelog
+* Wed Aug 12 2020 Sascha Grunert <sgrunert@suse.com>
+- remove unused version env var on build
+
 * Mon Sep 23 2019 Jindrich Novy <jnovy@redhat.com> - 0.0.1-0.1.gite200a9ed
 - fix spec file and build
 
