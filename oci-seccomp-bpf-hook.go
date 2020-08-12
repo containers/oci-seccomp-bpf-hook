@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -340,6 +341,10 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 	outputProfile = inputProfile
 	outputProfile.DefaultAction = types.ActErrno
 
+	if err := appendArchIfNotAlreadyIncluded(runtime.GOARCH, &outputProfile); err != nil {
+		return errors.Wrap(err, "appending architecture to ouput profile")
+	}
+
 	outputProfile.Syscalls = append(outputProfile.Syscalls, &types.Syscall{
 		Action: types.ActAllow,
 		Names:  names,
@@ -419,4 +424,19 @@ func syscallInProfile(profile *types.Seccomp, syscall string) bool {
 		}
 	}
 	return false
+}
+
+func appendArchIfNotAlreadyIncluded(goArch string, profile *types.Seccomp) error {
+	targetArch, err := types.GoArchToSeccompArch(goArch)
+	if err != nil {
+		return errors.Wrap(err, "determine target architecture")
+	}
+	for _, arch := range profile.Architectures {
+		if arch == targetArch {
+			// architecture already part of the profile
+			return nil
+		}
+	}
+	profile.Architectures = append(profile.Architectures, targetArch)
+	return nil
 }
