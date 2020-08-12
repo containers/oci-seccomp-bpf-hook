@@ -14,7 +14,7 @@ github.com/opencontainers/runtime-spec/specs-go
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/seccomp/containers-golang v0.5.0
+# github.com/seccomp/containers-golang v0.6.0
 ## explicit
 github.com/seccomp/containers-golang
 # github.com/seccomp/libseccomp-golang v0.9.1
@@ -27,7 +27,8 @@ github.com/sirupsen/logrus/hooks/syslog
 # github.com/stretchr/testify v1.4.0
 ## explicit
 github.com/stretchr/testify/assert
-# golang.org/x/sys v0.0.0-20190921190940-14da1ac737cc
+# golang.org/x/sys v0.0.0-20200720211630-cb9d2d5c5666
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2

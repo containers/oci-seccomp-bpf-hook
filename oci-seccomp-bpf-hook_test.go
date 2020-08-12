@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"testing"
 
 	types "github.com/seccomp/containers-golang"
@@ -50,5 +51,57 @@ func TestParseAnnotation(t *testing.T) {
 	} {
 		_, _, err := parseAnnotation(c)
 		assert.NotNil(t, err)
+	}
+}
+func TestAppendArchIfNotAlreadyIncluded(t *testing.T) {
+	if runtime.GOARCH != "amd64" {
+		t.Skip("Test runs only reliable on amd64 arch")
+	}
+
+	currentArch, err := types.GoArchToSeccompArch(runtime.GOARCH)
+	assert.Nil(t, err)
+	for _, tc := range []struct {
+		profile types.Seccomp
+		goArch  string
+		expect  func(error, types.Seccomp)
+	}{
+		{
+			profile: types.Seccomp{},
+			goArch:  runtime.GOARCH,
+			expect: func(err error, profile types.Seccomp) {
+				assert.Nil(t, err)
+				assert.Len(t, profile.Architectures, 1)
+			},
+		},
+		{
+			profile: types.Seccomp{
+				Architectures: []types.Arch{currentArch},
+			},
+			goArch: runtime.GOARCH,
+			expect: func(err error, profile types.Seccomp) {
+				assert.Nil(t, err)
+				assert.Len(t, profile.Architectures, 1)
+			},
+		},
+		{
+			profile: types.Seccomp{
+				Architectures: []types.Arch{types.ArchMIPS, types.ArchARM},
+			},
+			goArch: runtime.GOARCH,
+			expect: func(err error, profile types.Seccomp) {
+				assert.Nil(t, err)
+				assert.Len(t, profile.Architectures, 3)
+			},
+		},
+		{
+			profile: types.Seccomp{},
+			goArch:  "wrong",
+			expect: func(err error, profile types.Seccomp) {
+				assert.NotNil(t, err)
+				assert.Empty(t, profile.Architectures)
+			},
+		},
+	} {
+		tc.expect(appendArchIfNotAlreadyIncluded(tc.goArch, &tc.profile), tc.profile)
 	}
 }
