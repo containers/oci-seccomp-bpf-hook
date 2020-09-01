@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"log/syslog"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
@@ -20,6 +19,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/iovisor/gobpf/bcc"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
@@ -29,6 +29,12 @@ import (
 	"github.com/sirupsen/logrus"
 	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
 )
+
+/*
+#cgo LDFLAGS: -lbcc
+#include <bcc/bcc_common.h>
+*/
+import "C"
 
 const (
 	// BPFTimeout is the timeout in seconds to wait for the child process to signal
@@ -91,27 +97,31 @@ func main() {
 	}
 
 	if err != nil {
-		logrus.Fatalf("%v: please refer to the syslog (e.g., journalctl(1)) for more details", err)
+		logrus.Fatalf("Unable to run seccomp BPF OCI hook: %v (please refer to the syslog (e.g., journalctl(1)) for more details)", err)
 	}
 }
 
-// modprobe the specified module.
-func modprobe(module string) error {
-	bin, err := exec.LookPath("modprobe")
-	if err != nil {
-		// Fallback to `/usr/sbin/modprobe`.  The environment may be
-		// empty.  If that doesn't exist either, we'll fail below.
-		bin = "/usr/sbin/modprobe"
+// initBPF tries to build an empty BPF module, which automatically loads the
+// required kernel headers and checks if the headers are existing on disk.
+func initBPF() error {
+	logrus.Info("Initializing BPF by compiling empty module")
+	cs := C.CString("")
+	defer C.free(unsafe.Pointer(cs))
+
+	c := C.bpf_module_create_c_from_string(cs, 2, nil, 0, true, nil)
+	if c == nil {
+		return errors.New("building BPF module from empty string failed")
 	}
-	return exec.Command(bin, module).Run()
+	C.bpf_module_destroy(c)
+	logrus.Info("BPF initialized")
+	return nil
 }
 
 // detachAndTrace re-executes the current executable to "fork" in go-ish way and
 // traces the provided PID.
 func detachAndTrace() error {
-	logrus.Info("Trying to load `kheaders` module")
-	if err := modprobe("kheaders"); err != nil {
-		logrus.Infof("Loading `kheaders` failed, continuing in hope kernel headers reside on disk: %v", err)
+	if err := initBPF(); err != nil {
+		return errors.Wrap(err, "init BPF")
 	}
 
 	// Read the State spec from stdin and unmarshal it.
