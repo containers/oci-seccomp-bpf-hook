@@ -9,7 +9,7 @@
     },
     "when": {
         "annotations": {
-            "io.containers.trace-syscall": ".*"
+            "^io\\.containers\\.trace-syscall$": ".*"
         }
     },
     "stages": [
