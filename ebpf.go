@@ -14,7 +14,7 @@ type event struct {
 
 // the source is a bpf program compiled at runtime. Some macro's like
 // BPF_HASH and BPF_PERF_OUTPUT are expanded during compilation
-// by bcc. $PARENT_PID get's replaced before compilation with the PID of the container
+// by bcc. $PARENT_PID gets replaced before compilation with the PID of the container
 // Complete documentation is available at
 // https://github.com/iovisor/bcc/blob/master/docs/reference_guide.md
 const source string = `

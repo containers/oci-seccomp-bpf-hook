@@ -299,7 +299,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	// Waiting for the goroutine which is reading the perf buffer to be done
 	// The goroutine will exit when the container exits
 	wg.Wait()
-	logrus.Info("BPF progam has finished")
+	logrus.Info("BPF program has finished")
 
 	logrus.Info("PerfMap Stop")
 	go perfMap.Stop()
@@ -342,7 +342,7 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 	outputProfile.DefaultAction = types.ActErrno
 
 	if err := appendArchIfNotAlreadyIncluded(runtime.GOARCH, &outputProfile); err != nil {
-		return errors.Wrap(err, "appending architecture to ouput profile")
+		return errors.Wrap(err, "appending architecture to output profile")
 	}
 
 	outputProfile.Syscalls = append(outputProfile.Syscalls, &types.Syscall{
