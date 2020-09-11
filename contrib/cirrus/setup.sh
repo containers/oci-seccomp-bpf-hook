@@ -25,7 +25,7 @@ case "$OS_RELEASE_ID" in
             ooe.sh dnf update -y
         fi
 
-        # Installed AND separetly querried/displayed
+        # Installed AND separately querried/displayed
         CRITICAL_PKGS+=(\
             bcc
             bcc-devel

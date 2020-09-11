@@ -28,7 +28,7 @@ SECCOMPHOOKROOT=$(realpath "$(dirname $0)/../")
 # else: Assume $PWD is the root of the oci-seccomp-bpf-hook repository
 [[ "$SECCOMPHOOKROOT" != "/" ]] || SECCOMPHOOKROOT=$PWD
 
-# Command shortcuts save some typing (asumes $SECCOMPHOOKROOT is subdir of $HOME)
+# Command shortcuts save some typing (assumes $SECCOMPHOOKROOT is subdir of $HOME)
 PGCLOUD="$GCLOUD_SUDO podman run -it --rm -e AS_ID=$UID -e AS_USER=$USER --security-opt label=disable -v $TMPDIR:$HOME -v $HOME/.config/gcloud:$HOME/.config/gcloud -v $HOME/.config/gcloud/ssh:$HOME/.ssh -v $SECCOMPHOOKROOT:$SECCOMPHOOKROOT $GCLOUD_IMAGE --configuration=oci-seccomp-bpf-hook --project=$PROJECT"
 SCP_CMD="$PGCLOUD compute scp --zone=$ZONE"
 
@@ -198,7 +198,7 @@ echo -e "\n${YEL}Removing and re-creating $GOSRC on $VMNAME.${NOR}"
 showrun $SSH_CMD --command "rm -rf $GOSRC"
 showrun $SSH_CMD --command "mkdir -p $GOSRC"
 
-echo -e "\n${YEL}Transfering tarball to $VMNAME.${NOR}"
+echo -e "\n${YEL}Transferring tarball to $VMNAME.${NOR}"
 wait
 showrun $SCP_CMD $HOME/$TARBALL $SSHUSER@$VMNAME:/tmp/$TARBALL
 
