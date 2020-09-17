@@ -10,9 +10,9 @@ env:
     HOME: "/root"  # not set by default
     GOCACHE: "${HOME}/.cache/go-build"
 
-    # VM Images are maintained in the libpod repo.
-    _BUILT_IMAGE_SUFFIX: "libpod-6224667180531712"  # From the packer output of 'build_vm_images_script'
-    FEDORA_CACHE_IMAGE_NAME: "fedora-32-${_BUILT_IMAGE_SUFFIX}"
+    # VM Image built in containers/automation_images
+    _BUILT_IMAGE_SUFFIX: "c6110627968057344"
+    FEDORA_CACHE_IMAGE_NAME: "fedora-${_BUILT_IMAGE_SUFFIX}"
 
     # Must be defined true when testing w/in containers
     CONTAINER: "false"
