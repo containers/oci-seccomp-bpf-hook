@@ -258,11 +258,12 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 
 	// Initialize the wait group used to wait for the tracing to be finished.
 	wg.Add(1)
+	var events []event
 	go func() {
 		defer wg.Done()
-		recordSyscalls := false
-		var e event
+		local := []event{}
 		for data := range channel {
+			var e event
 			if err := binary.Read(bytes.NewBuffer(data), binary.LittleEndian, &e); err != nil {
 				// Return in case of an error. Otherwise, we
 				// could miss stop event and run into an
@@ -274,23 +275,16 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 			// The BPF program is done tracing, so we can stop
 			// reading from the perf buffer.
 			if e.StopTracing {
+				// Pointing events at the very end should relax
+				// the memory management a bit as we don't have
+				// to constantly sync across routines.
+				events = local
 				return
 			}
 
-			name, err := syscallIDtoName(e.ID)
-			if err != nil {
-				logrus.Errorf("error getting the name for syscall ID %d", e.ID)
-			}
-			// Syscalls are not recorded until prctl() is called. The first
-			// invocation of prctl is guaranteed to happen by the supported
-			// OCI runtimes (i.e., runc and crun) as it's being called when
-			// setting the seccomp profile.
-			if name == "prctl" {
-				recordSyscalls = true
-			}
-			if recordSyscalls {
-				syscalls[name]++
-			}
+			// We are in a hurry to not lose messages, so defer
+			// processing the events when we're done tracing.
+			local = append(local, e)
 		}
 	}()
 	logrus.Info("PerfMap Start")
@@ -300,6 +294,25 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	// The goroutine will exit when the container exits
 	wg.Wait()
 	logrus.Info("BPF program has finished")
+
+	// Post-process the recorded events and extract the syscall names.
+	recordSyscalls := false
+	for _, e := range events {
+		name, err := syscallIDtoName(e.ID)
+		if err != nil {
+			logrus.Errorf("error getting the name for syscall ID %d", e.ID)
+		}
+		// Syscalls are not recorded until prctl() is called. The first
+		// invocation of prctl is guaranteed to happen by the supported
+		// OCI runtimes (i.e., runc and crun) as it's being called when
+		// setting the seccomp profile.
+		if name == "prctl" {
+			recordSyscalls = true
+		}
+		if recordSyscalls {
+			syscalls[name]++
+		}
+	}
 
 	logrus.Info("PerfMap Stop")
 	go perfMap.Stop()
