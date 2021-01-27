@@ -103,7 +103,7 @@ case "$OS_RELEASE_ID" in
         )
         # Some small differences between 30 and 31
         case "$OS_RELEASE_VER" in
-            32)
+            33)
                 INSTALL_PACKAGES+=(crun)
                 ;;
             *)
