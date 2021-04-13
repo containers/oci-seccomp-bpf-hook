@@ -1,6 +1,46 @@
-#!/bin/bash
 
-set -e
+
+# Library of common, shared utility functions.  This file is intended
+# to be sourced by other scripts, not called directly.
+
+# BEGIN Global export of all variables
+set -a
+
+# Due to differences across platforms and runtime execution environments,
+# handling of the (otherwise) default shell setup is non-uniform.  Rather
+# than attempt to workaround differences, simply force-load/set required
+# items every time this library is utilized.
+_waserrexit=0
+if [[ "$SHELLOPTS" =~ errexit ]]; then _waserrexit=1; fi
+set +e  # Assumed in F33 for setting global vars
+if [[ -r "/etc/automation_environment" ]]; then
+    source /etc/automation_environment
+else # prior to automation library v2.0, this was necessary
+    source /etc/profile
+    source /etc/environment
+fi
+USER="$(whoami)"
+HOME="$(getent passwd $USER | cut -d : -f 6)"
+# Some platforms set and make this read-only
+[[ -n "$UID" ]] || \
+    UID=$(getent passwd $USER | cut -d : -f 3)
+if ((_waserrexit)); then set -e; fi
+
+# During VM Image build, the 'containers/automation' installation
+# was performed.  The final step of installation sets the library
+# location $AUTOMATION_LIB_PATH in /etc/environment or in the
+# default shell profile depending on distribution.
+# shellcheck disable=SC2154
+if [[ -n "$AUTOMATION_LIB_PATH" ]]; then
+        # shellcheck source=/usr/share/automation/lib/common_lib.sh
+        source $AUTOMATION_LIB_PATH/common_lib.sh
+else
+    (
+    echo "WARNING: It does not appear that containers/automation was installed."
+    echo "         Functionality of most of this library will be negatively impacted"
+    echo "         This ${BASH_SOURCE[0]} was loaded by ${BASH_SOURCE[1]}"
+    ) > /dev/stderr
+fi
 
 GOSRC="${GOSRC:-$(realpath $(dirname $0)/../../)}"
 SCRIPT_BASE="${SCRIPT_BASE:-./contrib/cirrus}"
@@ -15,47 +55,11 @@ OS_REL_VER="${OS_RELEASE_ID}-${OS_RELEASE_VER}"
 CONTAINER="${CONTAINER:-false}"
 
 if type -P go &> /dev/null; then
-    set -a && eval "$(go env)" && set +a
+    eval "$(go env)"
 fi
 
-die() {
-    echo "************************************************"
-    echo ">>>>> ${1:-FATAL ERROR (but no message given!) in ${FUNCNAME[1]}()}"
-    echo "************************************************"
-    exit 1
-}
-
-# Pass in a list of one or more envariable names; exit non-zero with
-# helpful error message if any value is empty
-req_env_var() {
-    # Provide context. If invoked from function use its name; else script name
-    local caller=${FUNCNAME[1]}
-    if [[ -n "$caller" ]]; then
-        # Indicate that it's a function name
-        caller="$caller()"
-    else
-        # Not called from a function: use script name
-        caller=$(basename $0)
-    fi
-
-    # Usage check
-    [[ -n "$1" ]] || die "FATAL: req_env_var: invoked without arguments"
-
-    # Each input arg is an envariable name, e.g. HOME PATH etc. Expand each.
-    # If any is empty, bail out and explain why.
-    for i; do
-        if [[ -z "${!i}" ]]; then
-            die "FATAL: $caller requires \$$i to be non-empty"
-        fi
-    done
-}
-
-# Helper/wrapper script to only show stderr/stdout on non-zero exit
-install_ooe() {
-    req_env_var GOSRC SCRIPT_BASE
-    echo "Installing script to mask stdout/stderr unless non-zero exit."
-    sudo install -D -m 755 "$GOSRC/$SCRIPT_BASE/ooe.sh" /usr/local/bin/ooe.sh
-}
+# END Global export of all variables
+set +a
 
 bad_os_id_ver() {
     echo "Unknown/Unsupported distro. $OS_RELEASE_ID and/or version $OS_RELEASE_VER for $(basename $0)"
