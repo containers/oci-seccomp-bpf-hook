@@ -38,6 +38,8 @@ struct mnt_namespace {
 // of the processes inside the container.
 BPF_HASH(parent_namespace, u64, unsigned int);
 
+BPF_HASH(seen_syscalls, int, int);
+
 // Opens a custom BPF table to push data to user space via perf ring buffer
 BPF_PERF_OUTPUT(events);
 
@@ -68,9 +70,11 @@ int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
     struct task_struct *task;
     struct nsproxy *nsproxy;
     struct mnt_namespace *mnt_ns;
+    int id = (int)args->id;
+    int prctl = __NR_prctl;
 
     data.pid = bpf_get_current_pid_tgid();
-    data.id = (int)args->id;
+    data.id = id;
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
 
     task = (struct task_struct *)bpf_get_current_task();
@@ -88,8 +92,16 @@ int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
         return 0;
     }
 
+    if (seen_syscalls.lookup(&id)) {
+	// The syscall was already notified.
+        return 0;
+    }
+
     data.stopTracing = false;
     events.perf_submit(args, &data, sizeof(data));
+    // start recording only after we've seen prctl
+    if (seen_syscalls.lookup(&prctl) || id == prctl)
+        seen_syscalls.update(&id, &id);
     return 0;
 }
 
