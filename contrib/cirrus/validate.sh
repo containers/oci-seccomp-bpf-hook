@@ -2,6 +2,10 @@
 
 set -e
 
-set -a && eval "$(go env)" && set +a
+source $(dirname $0)/lib.sh
+
+req_env_vars GOSRC
+
+cd $GOSRC
 
 make validate

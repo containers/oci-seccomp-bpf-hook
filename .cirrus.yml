@@ -11,7 +11,7 @@ env:
     GOCACHE: "${HOME}/.cache/go-build"
 
     # VM Image built in containers/automation_images
-    _BUILT_IMAGE_SUFFIX: "c6524344056676352"
+    _BUILT_IMAGE_SUFFIX: "c5032481331085312"
     FEDORA_CACHE_IMAGE_NAME: "fedora-${_BUILT_IMAGE_SUFFIX}"
 
     # Must be defined true when testing w/in containers
@@ -35,7 +35,7 @@ gce_instance:
 meta_task:
 
     container:
-        image: "quay.io/libpod/imgts:master"  # maintained in libpod repo
+        image: "quay.io/libpod/imgts:${_BUILT_IMAGE_SUFFIX}"
         cpu: 1
         memory: 1
 
@@ -69,8 +69,7 @@ build_task:
 
     # Uses VM via default gce_instance (above)
     gce_instance:
-        matrix:
-            image_name: $FEDORA_CACHE_IMAGE_NAME
+        image_name: $FEDORA_CACHE_IMAGE_NAME
 
     # Avoid downloading this stuff every time
     gocache_cache:
@@ -99,8 +98,7 @@ build_task:
 test_task:
 
     gce_instance:
-        matrix:
-            image_name: $FEDORA_CACHE_IMAGE_NAME
+        image_name: $FEDORA_CACHE_IMAGE_NAME
 
     # Avoid downloading this stuff every time
     gocache_cache:

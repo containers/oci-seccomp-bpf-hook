@@ -242,13 +242,6 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 		return errors.Wrap(err, "error attaching to tracepoint")
 	}
 
-	// Send a signal to the parent process to indicate the compilation has
-	// been completed.
-	if err := parentProcess.Signal(syscall.SIGUSR1); err != nil {
-		return err
-	}
-	signaledParent = true
-
 	table := bcc.NewTable(m.TableId("events"), m)
 	channel := make(chan []byte)
 	perfMap, err := bcc.InitPerfMap(table, channel, nil)
@@ -289,6 +282,13 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	}()
 	logrus.Info("PerfMap Start")
 	perfMap.Start()
+
+	// Send a signal to the parent process to indicate the compilation has
+	// been completed.
+	if err := parentProcess.Signal(syscall.SIGUSR1); err != nil {
+		return err
+	}
+	signaledParent = true
 
 	// Waiting for the goroutine which is reading the perf buffer to be done
 	// The goroutine will exit when the container exits

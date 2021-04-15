@@ -6,10 +6,9 @@ set -e
 
 source $(dirname $0)/lib.sh
 
-cd $GOSRC
+req_env_vars OS_RELEASE_ID GOSRC
 
-# Only Output on Error wrapper
-install_ooe
+cd $GOSRC
 
 CRITICAL_PKGS=()
 INSTALL_PACKAGES=()
@@ -93,7 +92,7 @@ case "$OS_RELEASE_ID" in
             python
             python3-dateutil
             python3-psutil
-            python3-pytoml
+            python3-toml
             selinux-policy-devel
             unzip
             vim
@@ -101,14 +100,6 @@ case "$OS_RELEASE_ID" in
             xz
             zip
         )
-        # Some small differences between 30 and 31
-        case "$OS_RELEASE_VER" in
-            33)
-                INSTALL_PACKAGES+=(crun)
-                ;;
-            *)
-                bad_os_id_ver ;;
-        esac
         ;;
     *)
         bad_os_id_ver
@@ -120,12 +111,6 @@ if [[ "${#INSTALL_PACKAGES[@]}" -gt "0" ]]; then
     ooe.sh $INSTALL_COMMAND ${INSTALL_PACKAGES[@]}
 fi
 
-if [[ "$OS_RELEASE_ID" == "fedora" ]] && [[ -r "/usr/libexec/podman/conmon" ]]
-then
-    echo "Warning: Working around podman 1.5 w/ embedded conmon."
-    rm -vf '/usr/libexec/podman/conmon'
-fi
-
 # Some variables change after package install
 source $(dirname $0)/lib.sh
 
@@ -135,3 +120,7 @@ ooe.sh make install.tools
 echo "Names and versions of critical packages"
 NOT_INSTALLED_RE='(package .+ is not installed)|(no packages found matching .+)'
 $LIST_COMMAND ${CRITICAL_PKGS[@]} | sed -r -e "s/$NOT_INSTALLED_RE/ > > \0/" | sort
+
+show_env_vars
+
+setenforce 0
