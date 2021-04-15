@@ -87,7 +87,7 @@ int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
     }
     unsigned int* parent_inum = parent_namespace.lookup_or_init(&key, &zero);
 
-    if (*parent_inum != inum) {
+    if (parent_inum != NULL && *parent_inum != inum) {
         return 0;
     }
 
