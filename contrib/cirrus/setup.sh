@@ -122,3 +122,5 @@ NOT_INSTALLED_RE='(package .+ is not installed)|(no packages found matching .+)'
 $LIST_COMMAND ${CRITICAL_PKGS[@]} | sed -r -e "s/$NOT_INSTALLED_RE/ > > \0/" | sort
 
 show_env_vars
+
+setenforce 0
