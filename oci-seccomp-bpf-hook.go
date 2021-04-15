@@ -296,22 +296,12 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	logrus.Info("BPF program has finished")
 
 	// Post-process the recorded events and extract the syscall names.
-	recordSyscalls := false
 	for _, e := range events {
 		name, err := syscallIDtoName(e.ID)
 		if err != nil {
 			logrus.Errorf("error getting the name for syscall ID %d", e.ID)
 		}
-		// Syscalls are not recorded until prctl() is called. The first
-		// invocation of prctl is guaranteed to happen by the supported
-		// OCI runtimes (i.e., runc and crun) as it's being called when
-		// setting the seccomp profile.
-		if name == "prctl" {
-			recordSyscalls = true
-		}
-		if recordSyscalls {
-			syscalls[name]++
-		}
+		syscalls[name]++
 	}
 
 	logrus.Info("PerfMap Stop")
