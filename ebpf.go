@@ -38,7 +38,7 @@ struct mnt_namespace {
 // of the processes inside the container.
 BPF_HASH(parent_namespace, u64, unsigned int);
 
-BPF_HASH(seen_syscalls, int, int);
+BPF_HASH(seen_syscalls, int, u64);
 
 // Opens a custom BPF table to push data to user space via perf ring buffer
 BPF_PERF_OUTPUT(events);
@@ -71,7 +71,6 @@ int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
     struct nsproxy *nsproxy;
     struct mnt_namespace *mnt_ns;
     int id = (int)args->id;
-    int prctl = __NR_prctl;
 
     data.pid = bpf_get_current_pid_tgid();
     data.id = id;
@@ -88,20 +87,40 @@ int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
     }
     unsigned int* parent_inum = parent_namespace.lookup_or_init(&key, &zero);
 
-    if (*parent_inum != inum) {
+    if (parent_inum != NULL && *parent_inum != inum) {
         return 0;
     }
 
-    if (seen_syscalls.lookup(&id)) {
-	// The syscall was already notified.
-        return 0;
+    u64 zero_64 = 0;
+    u64 seen = 0, *tmp = seen_syscalls.lookup(&id);
+    if (tmp != NULL)
+       seen = *tmp;
+    // Syscalls are not recorded until prctl() is called. The first
+    // invocation of prctl is guaranteed to happen by the supported
+    // OCI runtimes (i.e., runc and crun) as it's being called when
+    // setting the seccomp profile.
+    if (id == __NR_prctl) {
+        // The syscall was already notified.
+        if (seen > 1)
+            return 0;
+
+        // The first time we see prctl, we record it without generating
+        // any event.
+        if (seen == 0) {
+            goto record_and_exit;
+        }
+    } else {
+        // The syscall was already notified.
+        if (seen > 0)
+            return 0;
     }
 
     data.stopTracing = false;
     events.perf_submit(args, &data, sizeof(data));
-    // start recording only after we've seen prctl
-    if (seen_syscalls.lookup(&prctl) || id == prctl)
-        seen_syscalls.update(&id, &id);
+
+record_and_exit:
+    seen++;
+    seen_syscalls.update(&id, &seen);
     return 0;
 }
 
