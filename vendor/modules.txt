@@ -1,9 +1,11 @@
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/iovisor/gobpf v0.0.0-20210109143822-fb892541d416
+# github.com/iovisor/gobpf v0.1.1
 ## explicit
 github.com/iovisor/gobpf/bcc
 github.com/iovisor/gobpf/pkg/cpuonline
+github.com/iovisor/gobpf/pkg/cpupossible
+github.com/iovisor/gobpf/pkg/cpurange
 # github.com/opencontainers/runtime-spec v1.0.3-0.20200728170252-4d89ac9fbff6
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
