@@ -300,6 +300,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 		name, err := syscallIDtoName(e.ID)
 		if err != nil {
 			logrus.Errorf("error getting the name for syscall ID %d", e.ID)
+			continue
 		}
 		syscalls[name]++
 	}
