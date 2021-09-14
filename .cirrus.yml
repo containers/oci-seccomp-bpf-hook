@@ -11,7 +11,7 @@ env:
     GOCACHE: "${HOME}/.cache/go-build"
 
     # VM Image built in containers/automation_images
-    _BUILT_IMAGE_SUFFIX: "c6032583541653504"
+    _BUILT_IMAGE_SUFFIX: "c6431352024203264"
     FEDORA_CACHE_IMAGE_NAME: "fedora-${_BUILT_IMAGE_SUFFIX}"
 
     # Must be defined true when testing w/in containers
