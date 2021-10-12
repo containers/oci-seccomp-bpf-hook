@@ -91,7 +91,6 @@ int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
         return 0;
     }
 
-    u64 zero_64 = 0;
     u64 seen = 0, *tmp = seen_syscalls.lookup(&id);
     if (tmp != NULL)
        seen = *tmp;
