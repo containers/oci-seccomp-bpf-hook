@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -23,7 +24,6 @@ import (
 
 	"github.com/iovisor/gobpf/bcc"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pkg/errors"
 	types "github.com/seccomp/containers-golang"
 	seccomp "github.com/seccomp/libseccomp-golang"
 	"github.com/sirupsen/logrus"
@@ -124,7 +124,7 @@ func detachAndTrace() error {
 
 	// Sanity check the PID.
 	if s.Pid <= 0 {
-		return errors.Errorf("invalid PID %d (must be greater than 0)", s.Pid)
+		return fmt.Errorf("invalid PID %d (must be greater than 0)", s.Pid)
 	}
 
 	// Parse the State's annotation.
@@ -159,12 +159,12 @@ func detachAndTrace() error {
 
 	executable, err := os.Executable()
 	if err != nil {
-		return errors.Wrap(err, "cannot determine executable")
+		return fmt.Errorf("cannot determine executable: %v", err)
 	}
 
 	process, err := os.StartProcess(executable, []string{"oci-seccomp-bpf-hook", "-r", strconv.Itoa(s.Pid), "-o", outputFile, "-i", inputFile}, attr)
 	if err != nil {
-		return errors.Wrap(err, "cannot re-execute")
+		return fmt.Errorf("cannot re-execute: %v", err)
 	}
 	defer func() {
 		if err := process.Release(); err != nil {
@@ -183,7 +183,7 @@ func detachAndTrace() error {
 		case syscall.SIGUSR2:
 			return errors.New("error while tracing")
 		default:
-			return errors.Errorf("unexpected signal %v", s)
+			return fmt.Errorf("unexpected signal %v", s)
 		}
 
 	// The timeout kicked in. Kill the child and return the sad news.
@@ -191,7 +191,7 @@ func detachAndTrace() error {
 		if err := process.Kill(); err != nil {
 			logrus.Errorf("error killing child process: %v", err)
 		}
-		return errors.Errorf("BPF program didn't compile and attach within %d seconds", BPFTimeout)
+		return fmt.Errorf("BPF program didn't compile and attach within %d seconds", BPFTimeout)
 	}
 
 	return nil
@@ -204,7 +204,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	ppid := os.Getppid()
 	parentProcess, err := os.FindProcess(ppid)
 	if err != nil {
-		return errors.Wrapf(err, "cannot find parent process %d", ppid)
+		return fmt.Errorf("cannot find parent process %d: %v", ppid, err)
 	}
 	logrus.Infof("Running floating process PID to attach: %d", pid)
 
@@ -226,27 +226,27 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	logrus.Info("Loading enter tracepoint")
 	enterTrace, err := m.LoadTracepoint("enter_trace")
 	if err != nil {
-		return errors.Wrap(err, "error loading tracepoint")
+		return fmt.Errorf("error loading tracepoint: %v", err)
 	}
 	logrus.Info("Loading exit tracepoint")
 	checkExit, err := m.LoadTracepoint("check_exit")
 	if err != nil {
-		return errors.Wrap(err, "error loading tracepoint")
+		return fmt.Errorf("error loading tracepoint: %v", err)
 	}
 	logrus.Info("Loaded tracepoints")
 
 	if err := m.AttachTracepoint("raw_syscalls:sys_enter", enterTrace); err != nil {
-		return errors.Wrap(err, "error attaching to tracepoint")
+		return fmt.Errorf("error attaching to tracepoint: %v", err)
 	}
 	if err := m.AttachTracepoint("sched:sched_process_exit", checkExit); err != nil {
-		return errors.Wrap(err, "error attaching to tracepoint")
+		return fmt.Errorf("error attaching to tracepoint: %v", err)
 	}
 
 	table := bcc.NewTable(m.TableId("events"), m)
 	channel := make(chan []byte)
 	perfMap, err := bcc.InitPerfMap(table, channel, nil)
 	if err != nil {
-		return errors.Wrap(err, "error initializing perf map")
+		return fmt.Errorf("error initializing perf map: %v", err)
 	}
 
 	// Initialize the wait group used to wait for the tracing to be finished.
@@ -310,7 +310,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 
 	logrus.Infof("Writing seccomp profile to %q", profilePath)
 	if err := generateProfile(syscalls, profilePath, inputFile); err != nil {
-		return errors.Wrap(err, "error generating final seccomp profile")
+		return fmt.Errorf("error generating final seccomp profile: %v", err)
 	}
 	return nil
 }
@@ -324,11 +324,11 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 	if inputFile != "" {
 		input, err := ioutil.ReadFile(inputFile)
 		if err != nil {
-			return errors.Wrap(err, "error reading input file")
+			return fmt.Errorf("error reading input file: %v", err)
 		}
 		err = json.Unmarshal(input, &inputProfile)
 		if err != nil {
-			return errors.Wrap(err, "error parsing input file")
+			return fmt.Errorf("error parsing input file: %v", err)
 		}
 	}
 
@@ -346,7 +346,7 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 	outputProfile.DefaultAction = types.ActErrno
 
 	if err := appendArchIfNotAlreadyIncluded(runtime.GOARCH, &outputProfile); err != nil {
-		return errors.Wrap(err, "appending architecture to output profile")
+		return fmt.Errorf("appending architecture to output profile: %v", err)
 	}
 
 	outputProfile.Syscalls = append(outputProfile.Syscalls, &types.Syscall{
@@ -357,10 +357,10 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 
 	sJSON, err := json.Marshal(outputProfile)
 	if err != nil {
-		return errors.Wrap(err, "error writing seccomp profile")
+		return fmt.Errorf("error writing seccomp profile: %v", err)
 	}
 	if err := ioutil.WriteFile(profilePath, sJSON, 0644); err != nil {
-		return errors.Wrap(err, "error writing seccomp profile")
+		return fmt.Errorf("error writing seccomp profile: %v", err)
 	}
 	return nil
 }
@@ -370,7 +370,7 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 func parseAnnotation(annotation string) (outputFile string, inputFile string, err error) {
 	annotationSplit := strings.Split(annotation, ";")
 	if len(annotationSplit) > 2 {
-		return "", "", errors.Wrapf(errInvalidAnnotation, "more than one semi-colon: %q", annotation)
+		return "", "", fmt.Errorf("%v: more than one semi-colon: %q", errInvalidAnnotation, annotation)
 	}
 	for _, path := range annotationSplit {
 		switch {
@@ -378,33 +378,33 @@ func parseAnnotation(annotation string) (outputFile string, inputFile string, er
 		case strings.HasPrefix(path, "if:"):
 			inputFile = strings.TrimSpace(strings.TrimPrefix(path, InputPrefix))
 			if !filepath.IsAbs(inputFile) {
-				return "", "", errors.Wrapf(errInvalidAnnotation, "input file path must be absolute: %q", inputFile)
+				return "", "", fmt.Errorf("%v: input file path must be absolute: %q", errInvalidAnnotation, inputFile)
 			}
 			inputProfile := types.Seccomp{}
 			input, err := ioutil.ReadFile(inputFile)
 			if err != nil {
-				return "", "", errors.Wrapf(errInvalidAnnotation, "error reading input file: %q", inputFile)
+				return "", "", fmt.Errorf("%v: error reading input file: %q", errInvalidAnnotation, inputFile)
 			}
 			err = json.Unmarshal(input, &inputProfile)
 			if err != nil {
-				return "", "", errors.Wrapf(errInvalidAnnotation, "error parsing input file: %q", inputFile)
+				return "", "", fmt.Errorf("%v: error parsing input file: %q", errInvalidAnnotation, inputFile)
 			}
 
 		// Output profile
 		case strings.HasPrefix(path, "of:"):
 			outputFile = strings.TrimSpace(strings.TrimPrefix(path, OutputPrefix))
 			if !filepath.IsAbs(outputFile) {
-				return "", "", errors.Wrapf(errInvalidAnnotation, "output file path must be absolute: %q", outputFile)
+				return "", "", fmt.Errorf("%v: output file path must be absolute: %q", errInvalidAnnotation, outputFile)
 			}
 
 		// Unsupported default
 		default:
-			return "", "", errors.Wrapf(errInvalidAnnotation, "must start %q or %q prefix", InputPrefix, OutputPrefix)
+			return "", "", fmt.Errorf("%v: must start %q or %q prefix", errInvalidAnnotation, InputPrefix, OutputPrefix)
 		}
 	}
 
 	if outputFile == "" {
-		return "", "", errors.Wrap(errInvalidAnnotation, "providing output file is mandatory")
+		return "", "", fmt.Errorf("%v: providing output file is mandatory", errInvalidAnnotation)
 	}
 
 	return outputFile, inputFile, nil
@@ -433,7 +433,7 @@ func syscallInProfile(profile *types.Seccomp, syscall string) bool {
 func appendArchIfNotAlreadyIncluded(goArch string, profile *types.Seccomp) error {
 	targetArch, err := types.GoArchToSeccompArch(goArch)
 	if err != nil {
-		return errors.Wrap(err, "determine target architecture")
+		return fmt.Errorf("determine target architecture: %v", err)
 	}
 	for _, arch := range profile.Architectures {
 		if arch == targetArch {

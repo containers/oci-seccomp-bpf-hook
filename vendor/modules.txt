@@ -9,9 +9,6 @@ github.com/iovisor/gobpf/pkg/cpurange
 # github.com/opencontainers/runtime-spec v1.0.3-0.20200728170252-4d89ac9fbff6
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
-# github.com/pkg/errors v0.9.1
-## explicit
-github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/seccomp/containers-golang v0.6.0
