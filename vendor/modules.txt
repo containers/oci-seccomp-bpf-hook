@@ -20,14 +20,14 @@ github.com/seccomp/containers-golang
 # github.com/seccomp/libseccomp-golang v0.9.1
 ## explicit
 github.com/seccomp/libseccomp-golang
-# github.com/sirupsen/logrus v1.7.0
+# github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/syslog
 # github.com/stretchr/testify v1.4.0
 ## explicit
 github.com/stretchr/testify/assert
-# golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78
+# golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
