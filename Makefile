@@ -50,7 +50,7 @@ binary:
 
 .PHONY: validate
 validate:
-	$(GOBIN)/golangci-lint run
+	./build/golangci-lint run
 
 .PHONY: vendor
 vendor:
