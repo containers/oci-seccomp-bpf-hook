@@ -22,9 +22,9 @@ import (
 	"syscall"
 	"time"
 
+	types "github.com/containers/common/pkg/seccomp"
 	"github.com/iovisor/gobpf/bcc"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
-	types "github.com/seccomp/containers-golang"
 	seccomp "github.com/seccomp/libseccomp-golang"
 	"github.com/sirupsen/logrus"
 	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"

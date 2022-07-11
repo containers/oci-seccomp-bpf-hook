@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	types "github.com/seccomp/containers-golang"
+	types "github.com/containers/common/pkg/seccomp"
 	"github.com/stretchr/testify/assert"
 )
 
