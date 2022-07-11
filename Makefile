@@ -73,10 +73,9 @@ test-unit:
 .PHONY: install.tools
 install.tools: .install.golangci-lint .install.md2man
 
+.install.golangci-lint: VERSION=v1.45.2
 .install.golangci-lint:
-	if [ ! -x "$(GOBIN)/golangci-lint" ]; then \
-		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOBIN)/ v1.18.0; \
-	fi
+	curl -fsSL https://raw.githubusercontent.com/golangci/golangci-lint/$(VERSION)/install.sh | sh -s -- -b ./build $(VERSION)
 
 .install.md2man:
 	if [ -z "$(shell type -P go-md2man)" ]; then \
