@@ -3,12 +3,10 @@ module github.com/containers/oci-seccomp-bpf-hook
 go 1.14
 
 require (
+	github.com/containers/common v0.48.0
 	github.com/iovisor/gobpf v0.2.0
-	github.com/opencontainers/runtime-spec v1.0.3-0.20200728170252-4d89ac9fbff6
-	github.com/seccomp/containers-golang v0.6.0
-	github.com/seccomp/libseccomp-golang v0.9.1
+	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
+	github.com/seccomp/libseccomp-golang v0.9.2-0.20210429002308-3879420cc921
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.4.0
-	golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5 // indirect
-	gopkg.in/yaml.v2 v2.2.8 // indirect
+	github.com/stretchr/testify v1.7.1
 )

@@ -11,7 +11,7 @@ env:
     GOCACHE: "${HOME}/.cache/go-build"
 
     # VM Image built in containers/automation_images
-    _BUILT_IMAGE_SUFFIX: "c6431352024203264"
+    _BUILT_IMAGE_SUFFIX: "c5878804328480768"
     FEDORA_CACHE_IMAGE_NAME: "fedora-${_BUILT_IMAGE_SUFFIX}"
 
     # Must be defined true when testing w/in containers
@@ -58,44 +58,14 @@ meta_task:
 vendor_task:
 
     container:
-      image: golang:1.14
+      image: golang:1.18
 
     script:
         - make vendor
 
 
-# build binary and docs
-build_task:
-
-    # Uses VM via default gce_instance (above)
-    gce_instance:
-        image_name: $FEDORA_CACHE_IMAGE_NAME
-
-    # Avoid downloading this stuff every time
-    gocache_cache:
-        folder: "${GOCACHE}"
-        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
-
-    # Avoid needless rebuilding of tooling binaries
-    gopath_cache:
-        folder: "${GOPATH}/bin"
-        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
-
-    # Avoid needless rebuilding of source binaries
-    gosrc_bin_cache:
-        folder: "${CIRRUS_WORKING_DIR}/bin"
-        fingerprint_script: $SCRIPT_BASE/cache_fingerprint.sh
-
-    script:
-        - $SCRIPT_BASE/setup.sh
-        - make binary
-        - make install.tools
-        - make validate
-        - make docs
-
-
 # run unit and integration tests
-test_task:
+build_and_test_task:
 
     gce_instance:
         image_name: $FEDORA_CACHE_IMAGE_NAME
@@ -123,6 +93,9 @@ test_task:
     script:
         - $SCRIPT_BASE/setup.sh
         - make binary
+        - make install.tools
+        - make validate
+        - make docs
         - sudo make PREFIX=/usr install
         - make test-unit
         - sudo make test-integration
