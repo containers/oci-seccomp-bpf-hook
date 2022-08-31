@@ -23,3 +23,5 @@ sudo podman run --annotation io.containers.trace-syscall="if:[absolute path to t
 The profile will be created at the output path provided to the annotation. Providing `of:` is mandatory, while `if:` is optional. An input file can be used to create a baseline and newly recorded syscalls will be added to the set and written to the output. If a syscall is blocked in the base profile, then it will remain blocked in the output file even if it is recorded while tracing.
 
 Please refer to an article on [Enable Sysadmin](https://www.redhat.com/sysadmin/container-security-seccomp) for more details.
+
+`Copyright {2018-2022} {containers/oci-seccomp-bpf-hook maintainers}`
