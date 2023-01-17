@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"testing"
@@ -15,7 +14,7 @@ func TestParseAnnotation(t *testing.T) {
 	testProfile := types.Seccomp{}
 	testProfile.DefaultAction = types.ActErrno
 
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "input-*.json")
+	tmpFile, err := os.CreateTemp(os.TempDir(), "input-*.json")
 	if err != nil {
 		t.Fatalf("cannot create temporary file")
 	}
