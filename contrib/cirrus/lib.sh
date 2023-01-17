@@ -36,12 +36,6 @@ fi
 GOSRC="${GOSRC:-$(realpath $(dirname $0)/../../)}"
 SCRIPT_BASE="${SCRIPT_BASE:-./contrib/cirrus}"
 
-# GCE image-name compatible string representation of distribution name
-OS_RELEASE_ID="$(source /etc/os-release; echo $ID)"
-# GCE image-name compatible string representation of distribution _major_ version
-OS_RELEASE_VER="$(source /etc/os-release; echo $VERSION_ID | cut -d '.' -f 1)"
-# Combined to ease soe usage
-OS_REL_VER="${OS_RELEASE_ID}-${OS_RELEASE_VER}"
 # Set 'true' when operating inside a container
 CONTAINER="${CONTAINER:-false}"
 
