@@ -8,7 +8,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log/syslog"
 	"os"
 	"os/exec"
@@ -322,7 +321,7 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 	inputProfile := types.Seccomp{}
 
 	if inputFile != "" {
-		input, err := ioutil.ReadFile(inputFile)
+		input, err := os.ReadFile(inputFile)
 		if err != nil {
 			return fmt.Errorf("error reading input file: %v", err)
 		}
@@ -359,7 +358,7 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 	if err != nil {
 		return fmt.Errorf("error writing seccomp profile: %v", err)
 	}
-	if err := ioutil.WriteFile(profilePath, sJSON, 0644); err != nil {
+	if err := os.WriteFile(profilePath, sJSON, 0644); err != nil {
 		return fmt.Errorf("error writing seccomp profile: %v", err)
 	}
 	return nil
@@ -381,7 +380,7 @@ func parseAnnotation(annotation string) (outputFile string, inputFile string, er
 				return "", "", fmt.Errorf("%v: input file path must be absolute: %q", errInvalidAnnotation, inputFile)
 			}
 			inputProfile := types.Seccomp{}
-			input, err := ioutil.ReadFile(inputFile)
+			input, err := os.ReadFile(inputFile)
 			if err != nil {
 				return "", "", fmt.Errorf("%v: error reading input file: %q", errInvalidAnnotation, inputFile)
 			}
