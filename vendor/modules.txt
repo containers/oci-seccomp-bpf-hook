@@ -1,34 +1,42 @@
-# github.com/containers/common v0.48.0
-## explicit
+# github.com/containers/common v0.51.0
+## explicit; go 1.17
 github.com/containers/common/pkg/seccomp
 # github.com/davecgh/go-spew v1.1.1
+## explicit
 github.com/davecgh/go-spew/spew
 # github.com/iovisor/gobpf v0.2.1-0.20221005153822-16120a1bf4d4
-## explicit
+## explicit; go 1.15
 github.com/iovisor/gobpf/bcc
 github.com/iovisor/gobpf/pkg/cpuonline
 github.com/iovisor/gobpf/pkg/cpupossible
 github.com/iovisor/gobpf/pkg/cpurange
-# github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
+# github.com/kr/pretty v0.3.0
+## explicit; go 1.12
+# github.com/opencontainers/runtime-spec v1.1.0-rc.1
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
-# github.com/pkg/errors v0.9.1
-github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
+## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/seccomp/libseccomp-golang v0.9.2-0.20210429002308-3879420cc921
-## explicit
+# github.com/rogpeppe/go-internal v1.8.0
+## explicit; go 1.11
+# github.com/seccomp/libseccomp-golang v0.10.0
+## explicit; go 1.14
 github.com/seccomp/libseccomp-golang
-# github.com/sirupsen/logrus v1.8.1
-## explicit
+# github.com/sirupsen/logrus v1.9.0
+## explicit; go 1.13
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/syslog
-# github.com/stretchr/testify v1.7.1
-## explicit
+# github.com/stretchr/testify v1.8.1
+## explicit; go 1.13
 github.com/stretchr/testify/assert
-# golang.org/x/sys v0.0.0-20220422013727-9388b58f7150
+# golang.org/x/sys v0.6.0
+## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+# gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
+## explicit; go 1.11
+# gopkg.in/yaml.v3 v3.0.1
+## explicit
 gopkg.in/yaml.v3
