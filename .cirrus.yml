@@ -100,6 +100,10 @@ build_and_test_task:
         - make test-unit
         - sudo make test-integration
 
+    # The hook runs in the background, errors will be in the journal.
+    always:
+        journal_script: journalctl -b
+
     binaries_artifacts:
         path: "bin/*"
         type: "application/octet-stream"
