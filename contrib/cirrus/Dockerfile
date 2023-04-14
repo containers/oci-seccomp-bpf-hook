@@ -1,4 +1,4 @@
-FROM fedora:31
+FROM fedora:latest
 
 ENV GOPATH=/var/tmp/go
 ENV GOSRC=$GOPATH/src/github.com/containers/oci-seccomp-bpf-hook
