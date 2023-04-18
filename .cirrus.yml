@@ -11,8 +11,8 @@ env:
     GOCACHE: "${HOME}/.cache/go-build"
 
     # VM Image built in containers/automation_images
-    _BUILT_IMAGE_SUFFIX: "c6300530360713216"
-    FEDORA_CACHE_IMAGE_NAME: "fedora-${_BUILT_IMAGE_SUFFIX}"
+    IMAGE_SUFFIX: "c20230320t154110z-f37f36d12"
+    FEDORA_CACHE_IMAGE_NAME: "fedora-${IMAGE_SUFFIX}"
 
     # Must be defined true when testing w/in containers
     CONTAINER: "false"
@@ -99,6 +99,10 @@ build_and_test_task:
         - sudo make PREFIX=/usr install
         - make test-unit
         - sudo make test-integration
+
+    # The hook runs in the background, errors will be in the journal.
+    always:
+        journal_script: journalctl -b
 
     binaries_artifacts:
         path: "bin/*"
