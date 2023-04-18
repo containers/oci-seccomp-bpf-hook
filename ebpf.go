@@ -18,7 +18,6 @@ type event struct {
 // Complete documentation is available at
 // https://github.com/iovisor/bcc/blob/master/docs/reference_guide.md
 const source string = `
-#include <linux/bpf.h>
 #include <linux/nsproxy.h>
 #include <linux/pid_namespace.h>
 #include <linux/ns_common.h>
