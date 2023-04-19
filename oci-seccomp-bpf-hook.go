@@ -22,6 +22,7 @@ import (
 	"time"
 
 	types "github.com/containers/common/pkg/seccomp"
+	"github.com/containers/storage/pkg/unshare"
 	"github.com/iovisor/gobpf/bcc"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
 	seccomp "github.com/seccomp/libseccomp-golang"
@@ -54,6 +55,11 @@ func main() {
 	// so we can inspect its output via `journalctl`.
 	if hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, ""); err == nil {
 		logrus.AddHook(hook)
+	}
+
+	if os.Getuid() != 0 || unshare.IsRootless() {
+		logrus.Errorf("running the hook requires root privileges")
+		os.Exit(1)
 	}
 
 	runBPF := flag.Int("r", 0, "Trace the specified PID")
