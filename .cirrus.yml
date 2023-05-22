@@ -11,24 +11,15 @@ env:
     GOCACHE: "${HOME}/.cache/go-build"
 
     # VM Image built in containers/automation_images
-    IMAGE_SUFFIX: "c20230405t152256z-f37f36d12"
+    IMAGE_SUFFIX: "c20230517t144652z-f38f37d12"
     FEDORA_CACHE_IMAGE_NAME: "fedora-${IMAGE_SUFFIX}"
+    RAWHIDE_CACHE_IMAGE_NAME: "rawhide-${IMAGE_SUFFIX}"
 
     # Must be defined true when testing w/in containers
     CONTAINER: "false"
 
 
 gcp_credentials: ENCRYPTED[2ba9cffb563741f8538eab6d4a8b2d4684c0de23693a8ade80aced34596669a87a6c01e45ce45fad7f7db1d995e8c777]
-
-
-# Default VM to use unless set or modified by task
-gce_instance:
-    image_project: "${IMAGE_PROJECT}"
-    zone: "us-central1-c"  # Required by Cirrus for the time being
-    cpu: 2
-    memory: "4Gb"
-    disk: 200  # Required for performance reasons
-    image_name: "${FEDORA_CACHE_IMAGE_NAME}"
 
 
 # Update metadata on VM images referenced by this repository state
@@ -44,6 +35,7 @@ meta_task:
         # Space-separated list of images used by this repository state
         IMGNAMES: |-
             ${FEDORA_CACHE_IMAGE_NAME}
+            ${RAWHIDE_CACHE_IMAGE_NAME}
         BUILDID: "${CIRRUS_BUILD_ID}"
         REPOREF: "${CIRRUS_CHANGE_IN_REPO}"
         GCPJSON: ENCRYPTED[ef070c453a5ce68efca096a940835fdca530ed0ec2272ddb52bb02bf7d70dcc3ac9697b85b1d8dcce851931e008f63c0]
@@ -68,7 +60,20 @@ vendor_task:
 build_and_test_task:
 
     gce_instance:
-        image_name: $FEDORA_CACHE_IMAGE_NAME
+        image_project: "${IMAGE_PROJECT}"
+        zone: "us-central1-c"  # Required by Cirrus for the time being
+        cpu: 2
+        memory: "4Gb"
+        disk: 200  # Required for performance reasons
+        image_name: "${FEDORA_CACHE_IMAGE_NAME}"
+
+    matrix:
+        - name: "Test on Fedora"
+          gce_instance:
+              image_name: "${FEDORA_CACHE_IMAGE_NAME}"
+        - name: "Test on Rawhide"
+          gce_instance:
+              image_name: "${RAWHIDE_CACHE_IMAGE_NAME}"
 
     # Avoid downloading this stuff every time
     gocache_cache:

@@ -73,7 +73,7 @@ test-unit:
 .PHONY: install.tools
 install.tools: .install.golangci-lint .install.md2man
 
-.install.golangci-lint: VERSION=v1.50.1
+.install.golangci-lint: VERSION=v1.51.2
 .install.golangci-lint:
 	curl -fsSL https://raw.githubusercontent.com/golangci/golangci-lint/$(VERSION)/install.sh | sh -s -- -b ./build $(VERSION)
 
