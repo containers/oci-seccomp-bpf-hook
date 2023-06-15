@@ -9,7 +9,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.1.0-rc.3
 	github.com/seccomp/libseccomp-golang v0.10.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 )
 
 require (
