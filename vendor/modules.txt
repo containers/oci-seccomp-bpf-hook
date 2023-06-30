@@ -1,4 +1,4 @@
-# github.com/containers/common v0.54.0
+# github.com/containers/common v0.55.0
 ## explicit; go 1.18
 github.com/containers/common/pkg/seccomp
 # github.com/containers/storage v1.48.0
