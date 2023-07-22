@@ -6,7 +6,7 @@ require (
 	github.com/containers/common v0.55.2
 	github.com/containers/storage v1.48.0
 	github.com/iovisor/gobpf v0.2.1-0.20221005153822-16120a1bf4d4
-	github.com/opencontainers/runtime-spec v1.1.0-rc.3
+	github.com/opencontainers/runtime-spec v1.1.0
 	github.com/seccomp/libseccomp-golang v0.10.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
