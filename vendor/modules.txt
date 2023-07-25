@@ -15,7 +15,7 @@ github.com/davecgh/go-spew/spew
 # github.com/docker/go-units v0.5.0
 ## explicit
 github.com/docker/go-units
-# github.com/iovisor/gobpf v0.2.1-0.20221005153822-16120a1bf4d4
+# github.com/iovisor/gobpf v0.2.0
 ## explicit; go 1.15
 github.com/iovisor/gobpf/bcc
 github.com/iovisor/gobpf/pkg/cpuonline
