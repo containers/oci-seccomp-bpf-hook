@@ -1,7 +1,7 @@
 # github.com/containers/common v0.55.3
 ## explicit; go 1.18
 github.com/containers/common/pkg/seccomp
-# github.com/containers/storage v1.48.0
+# github.com/containers/storage v1.48.1
 ## explicit; go 1.19
 github.com/containers/storage/pkg/idtools
 github.com/containers/storage/pkg/mount
