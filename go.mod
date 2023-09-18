@@ -1,6 +1,6 @@
 module github.com/containers/oci-seccomp-bpf-hook
 
-go 1.17
+go 1.19
 
 require (
 	github.com/containers/common v0.55.4
