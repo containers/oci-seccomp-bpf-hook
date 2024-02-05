@@ -17,7 +17,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/moby/sys/mountinfo v0.7.1 // indirect
-	github.com/opencontainers/runc v1.1.10 // indirect
+	github.com/opencontainers/runc v1.1.12 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	golang.org/x/sys v0.14.0 // indirect
