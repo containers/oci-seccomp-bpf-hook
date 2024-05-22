@@ -6,6 +6,7 @@ GO_BUILD=$(GO) build
 ifeq ($(shell go help mod >/dev/null 2>&1 && echo true), true)
 	GO_BUILD=GO111MODULE=on $(GO) build -mod=vendor
 endif
+BUILDDIR ?= .
 DESTDIR ?=
 PREFIX ?= /usr/local
 SELINUXOPT ?= $(shell test -x /usr/sbin/selinuxenabled && selinuxenabled && echo -Z)
@@ -46,7 +47,7 @@ docs:
 
 .PHONY: binary
 binary:
-	$(GO_BUILD) -mod=vendor -o bin/oci-seccomp-bpf-hook -ldflags "-X main.version=$(OSBH_VERSION)" $(PROJECT)
+	$(GO_BUILD) -mod=vendor -o $(BUILDDIR)/bin/oci-seccomp-bpf-hook -ldflags "-X main.version=$(OSBH_VERSION)" $(PROJECT)
 
 .PHONY: validate
 validate:
@@ -94,7 +95,7 @@ install.docs:
 install-nobuild: install.docs-nobuild
 	install $(SELINUXOPT) -d -m 755 $(DESTDIR)$(HOOK_BIN_DIR)
 	install $(SELINUXOPT) -d -m 755 $(DESTDIR)$(HOOK_DIR)
-	install $(SELINUXOPT) -m 755 bin/oci-seccomp-bpf-hook $(DESTDIR)$(HOOK_BIN_DIR)
+	install $(SELINUXOPT) -m 755 $(BUILDDIR)/bin/oci-seccomp-bpf-hook $(DESTDIR)$(HOOK_BIN_DIR)
 	install $(SELINUXOPT) -m 644 oci-seccomp-bpf-hook.json $(DESTDIR)$(HOOK_DIR)
 	sed -i 's|HOOK_BIN_DIR|$(HOOK_BIN_DIR)|g' $(DESTDIR)$(HOOK_DIR)/oci-seccomp-bpf-hook.json
 
