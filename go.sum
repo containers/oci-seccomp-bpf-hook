@@ -1,5 +1,5 @@
-github.com/containers/common v0.60.2 h1:utcwp2YkO8c0mNlwRxsxfOiqfj157FRrBjxgjR6f+7o=
-github.com/containers/common v0.60.2/go.mod h1:I0upBi1qJX3QmzGbUOBN1LVP6RvkKhd3qQpZbQT+Q54=
+github.com/containers/common v0.60.4 h1:H5+LAMHPZEqX6vVNOQ+IguVsaFl8kbO/SZ/VPXjxhy0=
+github.com/containers/common v0.60.4/go.mod h1:I0upBi1qJX3QmzGbUOBN1LVP6RvkKhd3qQpZbQT+Q54=
 github.com/containers/storage v1.55.0 h1:wTWZ3YpcQf1F+dSP4KxG9iqDfpQY1otaUXjPpffuhgg=
 github.com/containers/storage v1.55.0/go.mod h1:28cB81IDk+y7ok60Of6u52RbCeBRucbFOeLunhER1RQ=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
