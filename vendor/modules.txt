@@ -1,8 +1,8 @@
 # github.com/containers/common v0.60.4
 ## explicit; go 1.21.0
 github.com/containers/common/pkg/seccomp
-# github.com/containers/storage v1.55.0
-## explicit; go 1.21
+# github.com/containers/storage v1.56.0
+## explicit; go 1.22.0
 github.com/containers/storage/pkg/fileutils
 github.com/containers/storage/pkg/idtools
 github.com/containers/storage/pkg/mount
@@ -24,11 +24,14 @@ github.com/iovisor/gobpf/pkg/cpupossible
 github.com/iovisor/gobpf/pkg/cpurange
 # github.com/kr/pretty v0.3.1
 ## explicit; go 1.12
+# github.com/moby/sys/capability v0.3.0
+## explicit; go 1.21
+github.com/moby/sys/capability
 # github.com/moby/sys/mountinfo v0.7.2
 ## explicit; go 1.17
 github.com/moby/sys/mountinfo
-# github.com/moby/sys/user v0.2.0
-## explicit; go 1.21
+# github.com/moby/sys/user v0.3.0
+## explicit; go 1.17
 github.com/moby/sys/user
 # github.com/opencontainers/runtime-spec v1.2.0
 ## explicit
@@ -46,10 +49,7 @@ github.com/sirupsen/logrus/hooks/syslog
 # github.com/stretchr/testify v1.9.0
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
-# github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
-## explicit
-github.com/syndtr/gocapability/capability
-# golang.org/x/sys v0.24.0
+# golang.org/x/sys v0.26.0
 ## explicit; go 1.18
 golang.org/x/sys/unix
 golang.org/x/sys/windows
