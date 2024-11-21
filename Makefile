@@ -64,7 +64,7 @@ test-integration:
 	@echo
 	@echo "==> Running integration tests (must be run as root)"
 	./hack/check_root.sh
-	bats $(BATS_OPTS) test/
+	env HOOKS_DIR=$(HOOK_DIR) bats $(BATS_OPTS) test/
 
 .PHONY: test-unit
 test-unit:

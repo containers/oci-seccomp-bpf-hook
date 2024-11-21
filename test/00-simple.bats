@@ -31,7 +31,7 @@ load helpers
 	tmpFile=$(mktemp)
 	echo "Temporary file: ${tmpFile}"
 
-	run podman run --net=host --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} ls
+	run podman run --net=host $HOOKS_DIR_OPT --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} ls
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 	# sleep two seconds to let the hook finish writing the file
@@ -49,7 +49,7 @@ load helpers
 	tmpFile=$(mktemp)
 	echo "Temporary file: ${tmpFile}"
 
-	run podman run --net=host --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} ls
+	run podman run --net=host $HOOKS_DIR_OPT --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} ls
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 	# sleep two seconds to let the hook finish writing the file
@@ -71,7 +71,7 @@ load helpers
 	tmpFile=$(mktemp)
 	echo "Temporary file: ${tmpFile}"
 
-	run podman run --net=host --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} ls
+	run podman run --net=host $HOOKS_DIR_OPT --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} ls
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 	# sleep two seconds to let the hook finish writing the file
@@ -100,7 +100,7 @@ load helpers
 	echo "Temporary file 1: ${tmpFile1}"
 	echo "Temporary file 2: ${tmpFile2}"
 
-	run podman run --net=host --annotation io.containers.trace-syscall=of:${tmpFile1} ${ALPINE} ls /
+	run podman run --net=host $HOOKS_DIR_OPT --annotation io.containers.trace-syscall=of:${tmpFile1} ${ALPINE} ls /
 	[ "$status" -eq 0 ]
 	# sleep two seconds to let the hook finish writing the file
 	sleep 2
@@ -113,7 +113,7 @@ load helpers
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -ne 0 ]
 
-	run podman run --net=host --annotation io.containers.trace-syscall="if:${tmpFile1};of:${tmpFile2}" ${ALPINE} ping -c3 $PINGABLE_HOST
+	run podman run --net=host $HOOKS_DIR_OPT --annotation io.containers.trace-syscall="if:${tmpFile1};of:${tmpFile2}" ${ALPINE} ping -c3 $PINGABLE_HOST
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 	sleep 2	# sleep two seconds to let the hook finish writing the file
@@ -138,7 +138,7 @@ load helpers
 	tmpFile=$(mktemp)
 	echo "Temporary file : ${tmpFile}"
 
-	run podman run --net=host --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} mkdir /foo
+	run podman run --net=host $HOOKS_DIR_OPT --annotation io.containers.trace-syscall=of:${tmpFile} ${ALPINE} mkdir /foo
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 	# sleep two seconds to let the hook finish writing the file
@@ -152,7 +152,7 @@ load helpers
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 
-	run podman run --net=host --annotation io.containers.trace-syscall="if:${BLOCK_MKDIR};of:${tmpFile}" ${ALPINE} mkdir /foo
+	run podman run --net=host $HOOKS_DIR_OPT --annotation io.containers.trace-syscall="if:${BLOCK_MKDIR};of:${tmpFile}" ${ALPINE} mkdir /foo
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 	# sleep two seconds to let the hook finish writing the file
