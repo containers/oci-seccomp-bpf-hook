@@ -46,9 +46,10 @@ github.com/seccomp/libseccomp-golang
 ## explicit; go 1.13
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/syslog
-# github.com/stretchr/testify v1.9.0
+# github.com/stretchr/testify v1.10.0
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
+github.com/stretchr/testify/assert/yaml
 # golang.org/x/sys v0.27.0
 ## explicit; go 1.18
 golang.org/x/sys/unix
