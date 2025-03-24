@@ -6,7 +6,7 @@ toolchain go1.22.11
 
 require (
 	github.com/containers/common v0.62.0
-	github.com/containers/storage v1.57.1
+	github.com/containers/storage v1.57.2
 	github.com/iovisor/gobpf v0.2.1-0.20221005153822-16120a1bf4d4
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/seccomp/libseccomp-golang v0.10.0
