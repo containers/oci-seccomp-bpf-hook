@@ -111,6 +111,13 @@ int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
         // The syscall was already notified.
         if (seen > 0)
             return 0;
+
+        // if prctl was not seen, ignore the current syscall.
+        u64 prctl = __NR_prctl;
+        u64 *prctl_seen = seen_syscalls.lookup(&prctl);
+        if (prctl_seen == NULL) {
+	    return 0;
+        }
     }
 
     data.stopTracing = false;
