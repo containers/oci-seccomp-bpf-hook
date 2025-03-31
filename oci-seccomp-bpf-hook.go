@@ -228,6 +228,13 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	m := bcc.NewModule(src, []string{})
 	defer m.Close()
 
+	table := bcc.NewTable(m.TableId("events"), m)
+	channel := make(chan []byte)
+	perfMap, err := bcc.InitPerfMap(table, channel, nil)
+	if err != nil {
+		return fmt.Errorf("error initializing perf map: %v", err)
+	}
+
 	logrus.Info("Loading enter tracepoint")
 	enterTrace, err := m.LoadTracepoint("enter_trace")
 	if err != nil {
@@ -245,13 +252,6 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	}
 	if err := m.AttachTracepoint("sched:sched_process_exit", checkExit); err != nil {
 		return fmt.Errorf("error attaching to tracepoint: %v", err)
-	}
-
-	table := bcc.NewTable(m.TableId("events"), m)
-	channel := make(chan []byte)
-	perfMap, err := bcc.InitPerfMap(table, channel, nil)
-	if err != nil {
-		return fmt.Errorf("error initializing perf map: %v", err)
 	}
 
 	// Initialize the wait group used to wait for the tracing to be finished.
