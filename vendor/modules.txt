@@ -1,8 +1,8 @@
 # github.com/containers/common v0.62.3
 ## explicit; go 1.22.8
 github.com/containers/common/pkg/seccomp
-# github.com/containers/storage v1.57.2
-## explicit; go 1.22.0
+# github.com/containers/storage v1.58.0
+## explicit; go 1.23.0
 github.com/containers/storage/pkg/fileutils
 github.com/containers/storage/pkg/idtools
 github.com/containers/storage/pkg/mount
@@ -30,7 +30,7 @@ github.com/moby/sys/capability
 # github.com/moby/sys/mountinfo v0.7.2
 ## explicit; go 1.17
 github.com/moby/sys/mountinfo
-# github.com/moby/sys/user v0.3.0
+# github.com/moby/sys/user v0.4.0
 ## explicit; go 1.17
 github.com/moby/sys/user
 # github.com/opencontainers/runtime-spec v1.2.1
@@ -50,8 +50,8 @@ github.com/sirupsen/logrus/hooks/syslog
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
-# golang.org/x/sys v0.29.0
-## explicit; go 1.18
+# golang.org/x/sys v0.32.0
+## explicit; go 1.23.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c

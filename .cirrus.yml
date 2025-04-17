@@ -48,7 +48,7 @@ meta_task:
 vendor_task:
 
     container:
-      image: golang:1.22
+      image: golang:1.23
 
     script:
         - make vendor
