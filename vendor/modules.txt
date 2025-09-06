@@ -1,5 +1,5 @@
-# github.com/containers/common v0.62.3
-## explicit; go 1.22.8
+# github.com/containers/common v0.64.2
+## explicit; go 1.23.3
 github.com/containers/common/pkg/seccomp
 # github.com/containers/storage v1.59.1
 ## explicit; go 1.23.0
@@ -39,8 +39,8 @@ github.com/opencontainers/runtime-spec/specs-go
 # github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 ## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/seccomp/libseccomp-golang v0.10.0
-## explicit; go 1.14
+# github.com/seccomp/libseccomp-golang v0.11.0
+## explicit; go 1.19
 github.com/seccomp/libseccomp-golang
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
