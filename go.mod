@@ -1,15 +1,15 @@
 module github.com/containers/oci-seccomp-bpf-hook
 
-go 1.23.0
+go 1.23.3
 
-toolchain go1.23.8
+toolchain go1.23.12
 
 require (
-	github.com/containers/common v0.62.3
+	github.com/containers/common v0.64.2
 	github.com/containers/storage v1.59.1
 	github.com/iovisor/gobpf v0.2.1-0.20221005153822-16120a1bf4d4
 	github.com/opencontainers/runtime-spec v1.2.1
-	github.com/seccomp/libseccomp-golang v0.10.0
+	github.com/seccomp/libseccomp-golang v0.11.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 )
