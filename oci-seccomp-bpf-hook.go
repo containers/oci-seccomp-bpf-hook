@@ -224,7 +224,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	}()
 
 	syscalls := make(map[string]int, 303)
-	src := strings.Replace(source, "$PARENT_PID", strconv.Itoa(pid), -1)
+	src := strings.ReplaceAll(source, "$PARENT_PID", strconv.Itoa(pid))
 	m := bcc.NewModule(src, []string{})
 	defer m.Close()
 
