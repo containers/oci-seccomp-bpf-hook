@@ -18,7 +18,9 @@ func TestParseAnnotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create temporary file")
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		_ = os.Remove(tmpFile.Name())
+	}()
 	testProfileByte, err := json.Marshal(testProfile)
 	if err != nil {
 		t.Fatalf("cannot marshal json")
