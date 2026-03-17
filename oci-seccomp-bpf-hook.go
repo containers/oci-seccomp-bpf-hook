@@ -21,8 +21,8 @@ import (
 	"syscall"
 	"time"
 
-	types "github.com/containers/common/pkg/seccomp"
-	"github.com/containers/storage/pkg/unshare"
+	types "go.podman.io/common/pkg/seccomp"
+	"go.podman.io/storage/pkg/unshare"
 	"github.com/iovisor/gobpf/bcc"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
 	seccomp "github.com/seccomp/libseccomp-golang"

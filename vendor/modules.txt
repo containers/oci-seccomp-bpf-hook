@@ -1,15 +1,3 @@
-# github.com/containers/common v0.64.2
-## explicit; go 1.23.3
-github.com/containers/common/pkg/seccomp
-# github.com/containers/storage v1.59.1
-## explicit; go 1.23.0
-github.com/containers/storage/pkg/fileutils
-github.com/containers/storage/pkg/idtools
-github.com/containers/storage/pkg/mount
-github.com/containers/storage/pkg/reexec
-github.com/containers/storage/pkg/regexp
-github.com/containers/storage/pkg/system
-github.com/containers/storage/pkg/unshare
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
@@ -22,8 +10,8 @@ github.com/iovisor/gobpf/bcc
 github.com/iovisor/gobpf/pkg/cpuonline
 github.com/iovisor/gobpf/pkg/cpupossible
 github.com/iovisor/gobpf/pkg/cpurange
-# github.com/kr/pretty v0.3.1
-## explicit; go 1.12
+# github.com/kr/text v0.2.0
+## explicit
 # github.com/moby/sys/capability v0.4.0
 ## explicit; go 1.21
 github.com/moby/sys/capability
@@ -50,12 +38,22 @@ github.com/sirupsen/logrus/hooks/syslog
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
-# golang.org/x/sys v0.34.0
-## explicit; go 1.23.0
+# go.podman.io/common v0.67.0
+## explicit; go 1.24.2
+go.podman.io/common/pkg/seccomp
+# go.podman.io/storage v1.62.0
+## explicit; go 1.24.0
+go.podman.io/storage/pkg/fileutils
+go.podman.io/storage/pkg/idtools
+go.podman.io/storage/pkg/mount
+go.podman.io/storage/pkg/reexec
+go.podman.io/storage/pkg/regexp
+go.podman.io/storage/pkg/system
+go.podman.io/storage/pkg/unshare
+# golang.org/x/sys v0.37.0
+## explicit; go 1.24.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
-## explicit; go 1.11
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
