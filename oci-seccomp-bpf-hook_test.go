@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	types "github.com/containers/common/pkg/seccomp"
+	types "go.podman.io/common/pkg/seccomp"
 	"github.com/stretchr/testify/assert"
 )
 
