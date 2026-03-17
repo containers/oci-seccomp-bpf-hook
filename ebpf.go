@@ -18,24 +18,15 @@ type event struct {
 // Complete documentation is available at
 // https://github.com/iovisor/bcc/blob/master/docs/reference_guide.md
 const source string = `
-#include <linux/nsproxy.h>
-#include <linux/pid_namespace.h>
-#include <linux/ns_common.h>
+#include <uapi/linux/ptrace.h>
+#include <asm/unistd.h>
 #include <linux/sched.h>
-#include <linux/tracepoint.h>
+#include <linux/nsproxy.h>
 
-/*
- * mnt_namespace is defined in fs/mount.h and not part of the kernel headers.
- * Hence, we need a forward decl here to make the compiler eat the code.
- */
-struct mnt_namespace {
-    atomic_t count;
-    struct ns_common ns;
-};
-
-// BPF_HASH used to store the PID namespace of the parent PID
-// of the processes inside the container.
-BPF_HASH(parent_namespace, u64, unsigned int);
+// Store the mount namespace pointer of the container's init process.
+// All processes in the same mount namespace share this pointer,
+// including those in sub-cgroups.
+BPF_HASH(parent_namespace, u64, u64);
 
 BPF_HASH(seen_syscalls, int, u64);
 
@@ -54,82 +45,74 @@ struct syscall_data {
     bool stopTracing;
 };
 
-// enter_trace : function is attached to the kernel tracepoint raw_syscalls:sys_enter it is
-// called whenever a syscall is made. The function stores the pid_namespace (task->nsproxy->pid_ns_for_children->ns.inum) of the PID which
-// starts the container in the BPF_HASH called parent_namespace.
-// The data of the syscall made by the process with the same pid_namespace as the parent_namespace is pushed to
-// userspace using perf ring buffer
-
-// specification of args from sys/kernel/debug/tracing/events/raw_syscalls/sys_enter/format
+// enter_trace is attached to raw_syscalls:sys_enter.  It records
+// syscalls made by processes in the same mount namespace as $PARENT_PID.
+// We compare the nsproxy->mnt_ns pointer directly instead of reading
+// ns_common.inum, because ns_common's layout changes across kernel
+// versions and including its header breaks BCC compilation on newer
+// kernels.
 int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
 {
     struct syscall_data data = {};
     u64 key = 0;
-    unsigned int zero = 0;
-    struct task_struct *task;
-    struct nsproxy *nsproxy;
-    struct mnt_namespace *mnt_ns;
     int id = (int)args->id;
 
-    data.pid = bpf_get_current_pid_tgid();
+    u64 pidtgid = bpf_get_current_pid_tgid();
+    data.pid = (u32)pidtgid;
     data.id = id;
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
 
-    task = (struct task_struct *)bpf_get_current_task();
-    nsproxy = task->nsproxy;
-    mnt_ns = nsproxy->mnt_ns;
-
-    unsigned int inum = mnt_ns->ns.inum;
+    struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    u64 mnt_ns_ptr = (u64)task->nsproxy->mnt_ns;
 
     if (data.pid == $PARENT_PID) {
-        parent_namespace.update(&key, &inum);
+        parent_namespace.update(&key, &mnt_ns_ptr);
     }
-    unsigned int* parent_inum = parent_namespace.lookup_or_init(&key, &zero);
+    u64 *parent_ns = parent_namespace.lookup(&key);
 
-    if (parent_inum != NULL && *parent_inum != inum) {
+    if (parent_ns == NULL || *parent_ns != mnt_ns_ptr) {
         return 0;
     }
 
-    u64 seen = 0, *tmp = seen_syscalls.lookup(&id);
-    if (tmp != NULL)
-       seen = *tmp;
     // Syscalls are not recorded until prctl() is called. The first
     // invocation of prctl is guaranteed to happen by the supported
     // OCI runtimes (i.e., runc and crun) as it's being called when
     // setting the seccomp profile.
+    int prctl_nr = __NR_prctl;
+    u64 *prctl_seen = seen_syscalls.lookup(&prctl_nr);
+
+    u64 seen = 0;
+    u64 *tmp = seen_syscalls.lookup(&id);
+    if (tmp != NULL)
+       seen = *tmp;
+
     if (id == __NR_prctl) {
-        // The syscall was already notified.
         if (seen > 1)
             return 0;
 
-        // The first time we see prctl, we record it without generating
-        // any event.
+        // First prctl: record it without generating an event.
         if (seen == 0) {
-            goto record_and_exit;
+            seen = 1;
+            seen_syscalls.update(&id, &seen);
+            return 0;
         }
     } else {
-        // The syscall was already notified.
         if (seen > 0)
             return 0;
 
-        // if prctl was not seen, ignore the current syscall.
-        u64 prctl = __NR_prctl;
-        u64 *prctl_seen = seen_syscalls.lookup(&prctl);
-        if (prctl_seen == NULL) {
-	    return 0;
-        }
+        if (prctl_seen == NULL)
+            return 0;
     }
 
     data.stopTracing = false;
     events.perf_submit(args, &data, sizeof(data));
 
-record_and_exit:
     seen++;
     seen_syscalls.update(&id, &seen);
     return 0;
 }
 
-// Checks if the container has exited
+// check_exit detects when the container's init process exits.
 int check_exit(struct tracepoint__sched__sched_process_exit* args)
 {
     if (args->pid == $PARENT_PID) {
