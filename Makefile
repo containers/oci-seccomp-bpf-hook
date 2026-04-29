@@ -68,7 +68,7 @@ test-integration:
 
 .PHONY: test-unit
 test-unit:
-	$(GO) test -v $(PROJECT)
+	GO111MODULE=on $(GO) test -mod=vendor -v $(PROJECT)
 
 
 .PHONY: install.tools
