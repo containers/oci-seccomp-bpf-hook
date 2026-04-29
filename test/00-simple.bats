@@ -85,7 +85,7 @@ load helpers
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 
-	run podman run --net=host --security-opt seccomp=${tmpFile} ${ALPINE} ping -c3 $PINGABLE_HOST
+	run podman run --net=host --security-opt seccomp=${tmpFile} ${ALPINE} wget -q -O /dev/null --tries=1 --timeout=5 http://$NET_HOST
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -ne 0 ]
 }
@@ -109,11 +109,11 @@ load helpers
 	echo "Size of the first generated file: ${size}"
 	[ "${size}" -gt 0 ]
 
-	run podman run --net=host --security-opt seccomp=${tmpFile1} ${ALPINE} ping -c3 $PINGABLE_HOST
+	run podman run --net=host --security-opt seccomp=${tmpFile1} ${ALPINE} wget -q -O /dev/null --tries=1 --timeout=5 http://$NET_HOST
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -ne 0 ]
 
-	run podman run --net=host --annotation io.containers.trace-syscall="if:${tmpFile1};of:${tmpFile2}" ${ALPINE} ping -c3 $PINGABLE_HOST
+	run podman run --net=host --annotation io.containers.trace-syscall="if:${tmpFile1};of:${tmpFile2}" ${ALPINE} wget -q -O /dev/null --tries=1 --timeout=5 http://$NET_HOST
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 	sleep 2	# sleep two seconds to let the hook finish writing the file
@@ -126,7 +126,7 @@ load helpers
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 
-	run podman run --net=host --security-opt seccomp=${tmpFile2} ${ALPINE} ping -c3 $PINGABLE_HOST
+	run podman run --net=host --security-opt seccomp=${tmpFile2} ${ALPINE} wget -q -O /dev/null --tries=1 --timeout=5 http://$NET_HOST
 	echo "Podman output: ${lines[*]}"
 	[ "$status" -eq 0 ]
 }
