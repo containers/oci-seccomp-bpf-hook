@@ -80,7 +80,7 @@ install.tools: .install.golangci-lint .install.md2man
 
 .install.md2man:
 	if [ -z "$(shell type -P go-md2man)" ]; then \
-		   $(call go-get,github.com/cpuguy83/go-md2man); \
+		GO111MODULE=on $(GO) install github.com/cpuguy83/go-md2man/v2@latest; \
 	fi
 
 .PHONY: install.docs-nobuild
