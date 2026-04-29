@@ -1,0 +1,120 @@
+name: Run tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  vendor:
+    name: Vendor check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - run: make vendor
+
+      - run: ./hack/tree_status.sh
+
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install build deps for cgo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libseccomp-dev libbpf-dev
+
+      - run: make install.tools
+
+      - run: make validate
+
+  build:
+    name: Build binary + docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libseccomp-dev libbpf-dev go-md2man
+
+      - run: make binary
+
+      - run: make docs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oci-seccomp-bpf-hook
+          path: bin/*
+
+  test-unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libseccomp-dev libbpf-dev
+
+      - run: make test-unit
+
+  test-integration:
+    name: Integration tests (bats)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install runtime + BPF deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            podman crun bats \
+            libseccomp-dev libbpf-dev libbpf1 \
+            bpfcc-tools "linux-headers-$(uname -r)" \
+            go-md2man jq
+
+      - run: make binary
+
+      - run: sudo make PREFIX=/usr install
+
+      - name: Run integration tests
+        run: sudo make test-integration BATS_OPTS=--tap
+
+      - name: Capture journal on failure
+        if: failure()
+        run: sudo journalctl -b | sudo tee journal.txt > /dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: integration-journal
+          path: journal.txt
