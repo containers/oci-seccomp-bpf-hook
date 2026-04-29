@@ -1,11 +1,5 @@
-export GO111MODULE=off
-
 GO ?= go
-GO_BUILD=$(GO) build
-# Go module support: set `-mod=vendor` to use the vendored sources
-ifeq ($(shell go help mod >/dev/null 2>&1 && echo true), true)
-	GO_BUILD=GO111MODULE=on $(GO) build -mod=vendor
-endif
+GO_BUILD=$(GO) build -mod=vendor
 BUILDDIR ?= .
 DESTDIR ?=
 PREFIX ?= /usr/local
@@ -33,10 +27,6 @@ ifeq ($(GOBIN),)
 GOBIN := $(FIRST_GOPATH)/bin
 endif
 
-define go-get
-	env GO111MODULE=off \
-		$(GO) get -u $(1)
-endef
 
 .PHONY: all
 all: docs binary
@@ -47,7 +37,7 @@ docs:
 
 .PHONY: binary
 binary:
-	$(GO_BUILD) -mod=vendor -o $(BUILDDIR)/bin/oci-seccomp-bpf-hook -ldflags "-X main.version=$(OSBH_VERSION)" $(PROJECT)
+	$(GO_BUILD) -o $(BUILDDIR)/bin/oci-seccomp-bpf-hook -ldflags "-X main.version=$(OSBH_VERSION)" $(PROJECT)
 
 .PHONY: validate
 validate:
@@ -55,9 +45,9 @@ validate:
 
 .PHONY: vendor
 vendor:
-	GO111MODULE=on $(GO) mod tidy
-	GO111MODULE=on $(GO) mod vendor
-	GO111MODULE=on $(GO) mod verify
+	$(GO) mod tidy
+	$(GO) mod vendor
+	$(GO) mod verify
 
 .PHONY: test-integration
 test-integration:
@@ -68,7 +58,7 @@ test-integration:
 
 .PHONY: test-unit
 test-unit:
-	$(GO) test -v $(PROJECT)
+	$(GO) test -mod=vendor -v $(PROJECT)
 
 
 .PHONY: install.tools
@@ -80,7 +70,7 @@ install.tools: .install.golangci-lint .install.md2man
 
 .install.md2man:
 	if [ -z "$(shell type -P go-md2man)" ]; then \
-		   $(call go-get,github.com/cpuguy83/go-md2man); \
+		$(GO) install github.com/cpuguy83/go-md2man/v2@latest; \
 	fi
 
 .PHONY: install.docs-nobuild
