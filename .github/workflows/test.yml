@@ -61,7 +61,7 @@ jobs:
 
       - run: make docs
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: oci-seccomp-bpf-hook
           path: bin/*
@@ -113,7 +113,7 @@ jobs:
         if: failure()
         run: sudo journalctl -b | sudo tee journal.txt > /dev/null || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: integration-journal
