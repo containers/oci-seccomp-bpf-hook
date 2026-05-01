@@ -10,6 +10,10 @@ type event struct {
 	Command [16]byte
 	// Stops tracing syscalls if true
 	StopTracing bool
+	// HasArg0 is true for syscalls whose first argument is being profiled.
+	HasArg0 bool
+	_       [2]byte // padding to align Arg0
+	Arg0    uint32
 }
 
 // the source is a bpf program compiled at runtime. Some macro's like
@@ -30,6 +34,10 @@ BPF_HASH(parent_namespace, u64, u64);
 
 BPF_HASH(seen_syscalls, int, u64);
 
+// seen_args deduplicates events for arg-tracked syscalls.
+// Key is (syscall_id << 32 | arg0) so each (syscall, arg0) pair is sent once.
+BPF_HASH(seen_args, u64, u64);
+
 // Opens a custom BPF table to push data to user space via perf ring buffer
 BPF_PERF_OUTPUT(events);
 
@@ -43,6 +51,12 @@ struct syscall_data {
     char comm[16];
     // Stops tracing syscalls if true
     bool stopTracing;
+    // True if the syscall has a 1st positional argument
+    bool hasArg0;
+    // padding
+    u8 _pad[2];
+    // The value of the first positional argument if any
+    u32 arg0;
 };
 
 // enter_trace is attached to raw_syscalls:sys_enter.  It records
@@ -102,6 +116,21 @@ int enter_trace(struct tracepoint__raw_syscalls__sys_enter* args)
 
         if (prctl_seen == NULL)
             return 0;
+
+        // Arg-tracked syscalls: dedup on (id, arg0) and carry arg0 in the event
+        // so the profiler can emit one allow rule per observed argument value.
+        if (id == __NR_socket) {
+            u32 arg0_val = (u32)args->args[0];
+            u64 arg_key = ((u64)(u32)id << 32) | arg0_val;
+            if (seen_args.lookup(&arg_key) != NULL)
+                return 0;
+            data.hasArg0 = true;
+            data.arg0 = arg0_val;
+            events.perf_submit(args, &data, sizeof(data));
+            u64 one = 1;
+            seen_args.update(&arg_key, &one);
+            return 0;
+        }
     }
 
     data.stopTracing = false;

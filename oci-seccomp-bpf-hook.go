@@ -50,6 +50,14 @@ var (
 	errInvalidAnnotation = errors.New("invalid annotation")
 )
 
+// argTrackedSyscalls maps syscall names to the argument index to capture.
+// For these syscalls the profiler emits one allow rule per observed argument
+// value (using SCMP_CMP_EQ) instead of a single unconditional allow.
+// The eBPF program must have a corresponding branch for each entry.
+var argTrackedSyscalls = map[string]int{
+	"socket": 0,
+}
+
 func main() {
 	// To facilitate debugging of the hook, write all logs to the syslog,
 	// so we can inspect its output via `journalctl`.
@@ -224,6 +232,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 	}()
 
 	syscalls := make(map[string]int, 303)
+	syscallArgs := make(map[string]map[uint32]struct{})
 	src := strings.ReplaceAll(source, "$PARENT_PID", strconv.Itoa(pid))
 	m := bcc.NewModule(src, []string{})
 	defer m.Close()
@@ -308,13 +317,19 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 			continue
 		}
 		syscalls[name]++
+		if _, tracked := argTrackedSyscalls[name]; tracked && e.HasArg0 {
+			if syscallArgs[name] == nil {
+				syscallArgs[name] = make(map[uint32]struct{})
+			}
+			syscallArgs[name][e.Arg0] = struct{}{}
+		}
 	}
 
 	logrus.Info("PerfMap Stop")
 	go perfMap.Stop()
 
 	logrus.Infof("Writing seccomp profile to %q", profilePath)
-	if err := generateProfile(syscalls, profilePath, inputFile); err != nil {
+	if err := generateProfile(syscalls, syscallArgs, profilePath, inputFile); err != nil {
 		return fmt.Errorf("error generating final seccomp profile: %v", err)
 	}
 	return nil
@@ -322,7 +337,7 @@ func runBPFSource(pid int, profilePath string, inputFile string) (finalErr error
 
 // generateProfile generates the seccomp profile from the specified syscalls and
 // the input file.
-func generateProfile(syscalls map[string]int, profilePath string, inputFile string) error {
+func generateProfile(syscalls map[string]int, syscallArgs map[string]map[uint32]struct{}, profilePath string, inputFile string) error {
 	outputProfile := types.Seccomp{}
 	inputProfile := types.Seccomp{}
 
@@ -337,10 +352,12 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 		}
 	}
 
+	// Unconditional allows for regular syscalls.
+	// Syscalls with per-value argument rules (in syscallArgs) are handled separately below.
 	var names []string
-	for syscallName, syscallID := range syscalls {
-		if syscallID > 0 {
-			if !syscallInProfile(&inputProfile, syscallName) {
+	for syscallName, count := range syscalls {
+		if count > 0 && !syscallInProfile(&inputProfile, syscallName) {
+			if _, hasArgRules := syscallArgs[syscallName]; !hasArgRules {
 				names = append(names, syscallName)
 			}
 		}
@@ -359,6 +376,32 @@ func generateProfile(syscalls map[string]int, profilePath string, inputFile stri
 		Names:  names,
 		Args:   []*types.Arg{},
 	})
+
+	// Per-value allow rules for arg-tracked syscalls: one rule per observed argument value.
+	for syscallName, argVals := range syscallArgs {
+		if syscallInProfile(&inputProfile, syscallName) {
+			continue
+		}
+		argIdx := uint(argTrackedSyscalls[syscallName])
+		vals := make([]uint32, 0, len(argVals))
+		for v := range argVals {
+			vals = append(vals, v)
+		}
+		sort.Slice(vals, func(i, j int) bool { return vals[i] < vals[j] })
+		for _, v := range vals {
+			outputProfile.Syscalls = append(outputProfile.Syscalls, &types.Syscall{
+				Action: types.ActAllow,
+				Names:  []string{syscallName},
+				Args: []*types.Arg{
+					{
+						Index: argIdx,
+						Value: uint64(v),
+						Op:    types.OpEqualTo,
+					},
+				},
+			})
+		}
+	}
 
 	sJSON, err := json.Marshal(outputProfile)
 	if err != nil {
