@@ -1,0 +1,38 @@
+name: Format check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    name: Format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Check Go formatting
+        run: |
+          out=$(gofmt -l $(find . -name "*.go" -not -path "./vendor/*"))
+          if [ -n "$out" ]; then
+            echo "Run 'go fmt ./...' to fix:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: Check C formatting
+        run: clang-format --dry-run --Werror bpf/ebpf.c
+
+      - name: Install shfmt
+        run: go install mvdan.cc/sh/v3/cmd/shfmt@v3.12.0
+
+      - name: Check shell formatting
+        run: shfmt -i 2 --diff hack/*.sh test/*.bats test/*.bash test/*.sh
