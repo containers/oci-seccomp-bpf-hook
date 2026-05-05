@@ -11,8 +11,8 @@ export TMPDIR=${TMPDIR:-/var/tmp}
 . helpers.bash
 
 function execute() {
-	>&2 echo "++ $@"
-	eval "$@"
+  >&2 echo "++ $@"
+  eval "$@"
 }
 
 # Tests to run. Defaults to all.

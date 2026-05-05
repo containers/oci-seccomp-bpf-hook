@@ -21,13 +21,13 @@ import (
 	"syscall"
 	"time"
 
-	types "go.podman.io/common/pkg/seccomp"
-	"go.podman.io/storage/pkg/unshare"
 	"github.com/iovisor/gobpf/bcc"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
 	seccomp "github.com/seccomp/libseccomp-golang"
 	"github.com/sirupsen/logrus"
 	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
+	types "go.podman.io/common/pkg/seccomp"
+	"go.podman.io/storage/pkg/unshare"
 )
 
 const (

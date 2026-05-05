@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"testing"
 
-	types "go.podman.io/common/pkg/seccomp"
 	"github.com/stretchr/testify/assert"
+	types "go.podman.io/common/pkg/seccomp"
 )
 
 func TestParseAnnotation(t *testing.T) {
