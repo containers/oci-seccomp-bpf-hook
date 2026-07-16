@@ -38,11 +38,11 @@ github.com/sirupsen/logrus/hooks/syslog
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
-# go.podman.io/common v0.67.1
-## explicit; go 1.24.2
+# go.podman.io/common v0.68.1
+## explicit; go 1.25.6
 go.podman.io/common/pkg/seccomp
-# go.podman.io/storage v1.62.0
-## explicit; go 1.24.0
+# go.podman.io/storage v1.63.0
+## explicit; go 1.25.0
 go.podman.io/storage/pkg/fileutils
 go.podman.io/storage/pkg/idtools
 go.podman.io/storage/pkg/mount
@@ -50,8 +50,8 @@ go.podman.io/storage/pkg/reexec
 go.podman.io/storage/pkg/regexp
 go.podman.io/storage/pkg/system
 go.podman.io/storage/pkg/unshare
-# golang.org/x/sys v0.37.0
-## explicit; go 1.24.0
+# golang.org/x/sys v0.44.0
+## explicit; go 1.25.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # gopkg.in/yaml.v3 v3.0.1
