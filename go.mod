@@ -1,6 +1,6 @@
 module github.com/containers/oci-seccomp-bpf-hook
 
-go 1.25.6
+go 1.25.7
 
 require (
 	github.com/iovisor/gobpf v0.2.1-0.20221005153822-16120a1bf4d4
@@ -8,8 +8,8 @@ require (
 	github.com/seccomp/libseccomp-golang v0.11.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
-	go.podman.io/common v0.68.1
-	go.podman.io/storage v1.63.0
+	go.podman.io/common v0.69.0
+	go.podman.io/storage v1.64.0
 )
 
 require (
@@ -18,8 +18,8 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
-	github.com/moby/sys/user v0.4.0 // indirect
+	github.com/moby/sys/user v0.4.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
