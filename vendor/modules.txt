@@ -18,8 +18,8 @@ github.com/moby/sys/capability
 # github.com/moby/sys/mountinfo v0.7.2
 ## explicit; go 1.17
 github.com/moby/sys/mountinfo
-# github.com/moby/sys/user v0.4.0
-## explicit; go 1.17
+# github.com/moby/sys/user v0.4.1
+## explicit; go 1.18
 github.com/moby/sys/user
 # github.com/opencontainers/runtime-spec v1.3.0
 ## explicit
@@ -38,10 +38,10 @@ github.com/sirupsen/logrus/hooks/syslog
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
-# go.podman.io/common v0.68.1
-## explicit; go 1.25.6
+# go.podman.io/common v0.69.0
+## explicit; go 1.25.7
 go.podman.io/common/pkg/seccomp
-# go.podman.io/storage v1.63.0
+# go.podman.io/storage v1.64.0
 ## explicit; go 1.25.0
 go.podman.io/storage/pkg/fileutils
 go.podman.io/storage/pkg/idtools
@@ -50,7 +50,7 @@ go.podman.io/storage/pkg/reexec
 go.podman.io/storage/pkg/regexp
 go.podman.io/storage/pkg/system
 go.podman.io/storage/pkg/unshare
-# golang.org/x/sys v0.44.0
+# golang.org/x/sys v0.47.0
 ## explicit; go 1.25.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
