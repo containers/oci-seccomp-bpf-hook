@@ -29,8 +29,8 @@ github.com/sirupsen/logrus v1.9.4 h1:TsZE7l11zFCLZnZ+teH4Umoq5BhEIfIzfRDZ1Uzql2w
 github.com/sirupsen/logrus v1.9.4/go.mod h1:ftWc9WdOfJ0a92nsE2jF5u5ZwH8Bv2zdeOC42RjbV2g=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-go.podman.io/common v0.69.0 h1:tAM8gJRCgoPmyfXnYP+6VRfOQ6JySgafpY28OhDZpWc=
-go.podman.io/common v0.69.0/go.mod h1:g1iVXP+Xn/8He+96qpJw75pu054FRDQMiDGf2VKKspg=
+go.podman.io/common v0.69.1 h1:hTIv8wzHJfHAMMZRocjv1849TiWrf5HDhH0eD74qJqY=
+go.podman.io/common v0.69.1/go.mod h1:g1iVXP+Xn/8He+96qpJw75pu054FRDQMiDGf2VKKspg=
 go.podman.io/storage v1.64.0 h1:ryHCZO+Zl0ZG7OTHF+Qc4C0zLNuoe9W35zgE7mh2pYw=
 go.podman.io/storage v1.64.0/go.mod h1:ft0DzCRMZs1yn0rszmLYXEEwgd7IIc66JRwSRPUDwwc=
 golang.org/x/sys v0.47.0 h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
