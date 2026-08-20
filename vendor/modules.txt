@@ -7,8 +7,6 @@ github.com/iovisor/gobpf/bcc
 github.com/iovisor/gobpf/pkg/cpuonline
 github.com/iovisor/gobpf/pkg/cpupossible
 github.com/iovisor/gobpf/pkg/cpurange
-# github.com/kr/text v0.2.0
-## explicit
 # github.com/moby/sys/capability v0.4.0
 ## explicit; go 1.21
 github.com/moby/sys/capability
@@ -28,7 +26,7 @@ github.com/seccomp/libseccomp-golang
 ## explicit; go 1.23
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/syslog
-# github.com/stretchr/testify v1.12.0
+# github.com/stretchr/testify v1.12.1
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
@@ -46,10 +44,10 @@ go.podman.io/storage/pkg/reexec
 go.podman.io/storage/pkg/regexp
 go.podman.io/storage/pkg/system
 go.podman.io/storage/pkg/unshare
+# go.yaml.in/yaml/v3 v3.0.5
+## explicit; go 1.16
+go.yaml.in/yaml/v3
 # golang.org/x/sys v0.47.0
 ## explicit; go 1.25.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# gopkg.in/yaml.v3 v3.0.1
-## explicit
-gopkg.in/yaml.v3
