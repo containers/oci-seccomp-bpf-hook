@@ -8,8 +8,8 @@ require (
 	github.com/seccomp/libseccomp-golang v0.12.0
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
-	go.podman.io/common v0.69.1
-	go.podman.io/storage v1.64.0
+	go.podman.io/common v0.69.2
+	go.podman.io/storage v1.64.2
 )
 
 require (
