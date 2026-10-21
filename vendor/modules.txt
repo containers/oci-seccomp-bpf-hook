@@ -32,11 +32,14 @@ github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
 github.com/stretchr/testify/internal/difflib
 github.com/stretchr/testify/internal/spew
-# go.podman.io/common v0.69.1
-## explicit; go 1.25.7
+# go.podman.io/common v0.70.0
+## explicit; go 1.26.0
 go.podman.io/common/pkg/seccomp
-# go.podman.io/storage v1.64.0
-## explicit; go 1.25.0
+# go.podman.io/storage v1.65.0
+## explicit; go 1.26.0
+go.podman.io/storage/internal/rootlookupcache
+go.podman.io/storage/internal/stat
+go.podman.io/storage/internal/xattrs
 go.podman.io/storage/pkg/fileutils
 go.podman.io/storage/pkg/idtools
 go.podman.io/storage/pkg/mount
@@ -47,7 +50,7 @@ go.podman.io/storage/pkg/unshare
 # go.yaml.in/yaml/v3 v3.0.5
 ## explicit; go 1.16
 go.yaml.in/yaml/v3
-# golang.org/x/sys v0.47.0
-## explicit; go 1.25.0
+# golang.org/x/sys v0.49.0
+## explicit; go 1.26.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
