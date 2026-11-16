@@ -35,7 +35,7 @@ github.com/stretchr/testify/internal/spew
 # go.podman.io/common v0.70.0
 ## explicit; go 1.26.0
 go.podman.io/common/pkg/seccomp
-# go.podman.io/storage v1.65.0
+# go.podman.io/storage v1.65.1
 ## explicit; go 1.26.0
 go.podman.io/storage/internal/rootlookupcache
 go.podman.io/storage/internal/stat

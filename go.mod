@@ -9,7 +9,7 @@ require (
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 	go.podman.io/common v0.70.0
-	go.podman.io/storage v1.65.0
+	go.podman.io/storage v1.65.1
 )
 
 require (
